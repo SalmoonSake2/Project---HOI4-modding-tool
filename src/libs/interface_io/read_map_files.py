@@ -4,16 +4,15 @@ read_map_files.py
 讀取資料夾並獲取地圖資訊
 '''
 
-import queue
-
 import pandas as pd
 from pathlib import Path
 
 from libs.root import Root
+from libs.interface.abstract_progress_window import Abstract_progress_window as abspw
 from libs.pdxscript.pdxscript_convert import read as pdxread
 from libs.util.map_data_reader import read_railway_file, read_supply_node_file
 
-def read_map_files(prev,root:Root,result_queue:queue.Queue, progress_queue:queue.Queue) -> None:
+def read_map_files(prev:abspw,root:Root) -> None:
     '''
     讀取地圖檔案，相關技術細節可以參閱\n
     https://hoi4.paradoxwikis.com/Map_modding#Provinces
@@ -41,7 +40,7 @@ def read_map_files(prev,root:Root,result_queue:queue.Queue, progress_queue:queue
     supply_nodes_data = read_supply_node_file(map_file_path.joinpath("supply_nodes.txt").as_posix())
     railway_data = read_railway_file(map_file_path.joinpath("railways.txt").as_posix())
     
-    progress_queue.put(50)
+    prev.progress_queue.put(50)
 
     strategicregion_data = dict()
     strategicregion_files = list(strategicregions_file_path.rglob("*txt"))
@@ -49,9 +48,9 @@ def read_map_files(prev,root:Root,result_queue:queue.Queue, progress_queue:queue
         data = pdxread(file)
         strategicregion_id = int(data[0].value[0].value)
         strategicregion_data[strategicregion_id] = data
-        progress_queue.put(50+int((counter+1)/strategicregions_file_count)*50)
+        prev.progress_queue.put(50+int((counter+1)/strategicregions_file_count)*50)
     
-    result_queue.put({"provionce":province_definitions,
+    prev.result_queue.put({"provionce":province_definitions,
                         "adjacency":adjacencies_data,
                         "adjacency_rule":adjacency_rules_data,
                         "continent":continent_data,

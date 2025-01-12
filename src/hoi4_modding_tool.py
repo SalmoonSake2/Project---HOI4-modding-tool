@@ -56,8 +56,8 @@ class App:
         if not self.root.has_updated:
             if self.root.hoi4path is not None:
                 self.character_btn.config(state="normal")
-                Progress_window(self.root,self.root,target=read_loc_files,output_container=self.root.loc_data,progress_msg="讀取本地化檔案")
-                Progress_window(self.root,self.root,target=read_map_files,output_container=self.root.map_data,progress_msg="讀取地圖檔案")
+                Progress_window(target=read_loc_files,args=(self.root,),output_container=self.root.loc_data,prev=self.root)
+                Progress_window(target=read_map_files,args=(self.root,),output_container=self.root.map_data,prev=self.root)
                 self.root.has_updated = True
 
         self.root.after(ms=100,func=self.update_task)

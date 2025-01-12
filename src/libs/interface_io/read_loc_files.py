@@ -9,9 +9,10 @@ import re
 from pathlib import Path
 
 from libs.enum.enums import *
+from libs.interface.progress_window import Progress_window
 from libs.root import Root
 
-def read_loc_files(prev,root:Root,result_queue:queue.Queue, progress_queue:queue.Queue) -> None:
+def read_loc_files(prev:Progress_window,root:Root) -> None:
     '''
     讀取本地化文件
 
@@ -54,13 +55,13 @@ def read_loc_files(prev,root:Root,result_queue:queue.Queue, progress_queue:queue
         read_loc_file(prev,loc_file)
         if prev.is_cancel_task:
             break
-        progress_queue.put(int(((index+1)/loc_file_count)*100))
+        prev.progress_queue.put(int(((index+1)/loc_file_count)*100))
     
     if prev.is_cancel_task:
         return
     
     #輸出檔案
-    result_queue.put(prev.localization_data)
+    prev.result_queue.put(prev.localization_data)
 
 def read_loc_file(prev,loc_file:str) -> None:
     '''
