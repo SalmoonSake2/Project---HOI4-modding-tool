@@ -14,15 +14,15 @@ class Progress_window:
     def __init__(self,
                  target:Callable,
                  args:tuple = (),
-                 output_container = None,
+                 callback_function:Callable = None,
                  prev: ttk.Toplevel | ttk.Window = None,
                  title:str = "提示",
                  progress_msg:str = "執行中") -> None:
         '''
-        建立視窗並以`args`為參數執行`target`，輸出到`output_container`。
+        建立視窗並以`args`為參數執行`target`。
         :param target: 執行對象
         :param args: 執行參數
-        :param output_container: 執行對象輸出位置
+        :param callback_function: 回傳函數
         :param prev: 引用的視窗
         :param title: 標題
         :param progress_msg: 執行時顯示的字串
@@ -30,7 +30,7 @@ class Progress_window:
 
         self.target = target
         self.args = args
-        self.output_container = output_container
+        self.callback_function = callback_function
         self.prev = prev
         self.title = title
         self.progress_msg = progress_msg
@@ -98,7 +98,8 @@ class Progress_window:
         
         #嘗試獲取資料，如果沒有則更新進度條
         try:
-            self.output_container = self.result_queue.get_nowait()
+            self.callback_function(self.result_queue.get_nowait())
+
             self.toplevel.destroy()
             return 
         except queue.Empty:

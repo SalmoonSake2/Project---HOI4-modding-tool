@@ -56,8 +56,13 @@ class App:
         if not self.root.has_updated:
             if self.root.hoi4path is not None:
                 self.character_btn.config(state="normal")
-                Progress_window(target=read_loc_files,args=(self.root,),output_container=self.root.loc_data,prev=self.root)
-                Progress_window(target=read_map_files,args=(self.root,),output_container=self.root.map_data,prev=self.root)
+                
+                def set_loc(x): self.root.loc_data = x
+                Progress_window(target=read_loc_files,args=(self.root,),callback_function=set_loc,prev=self.root)
+
+                def set_map(x): self.root.map_data = x
+                Progress_window(target=read_map_files,args=(self.root,),callback_function=set_map,prev=self.root)
+
                 self.root.has_updated = True
 
         self.root.after(ms=100,func=self.update_task)
