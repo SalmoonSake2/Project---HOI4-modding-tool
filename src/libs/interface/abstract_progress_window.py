@@ -12,7 +12,7 @@ class Abstract_progress_window:
     def __init__(self) -> None:
         self.target:Callable
         self.args:tuple
-        self.output_container = None
+        self.callback_function = None
         self.prev:ttk.Toplevel | ttk.Window
         self.title:str
         self.progress_msg:str
