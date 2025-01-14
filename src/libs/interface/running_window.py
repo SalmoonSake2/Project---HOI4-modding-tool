@@ -5,7 +5,6 @@ running_window.py
 '''
 
 from typing import Callable, Iterable
-import queue
 from threading import Thread
 
 import ttkbootstrap as ttk
@@ -27,7 +26,7 @@ class RunningWindow:
         - 遇到需要raise錯誤的地方則設定`running_window.exception`用於錯誤字串顯示。\n
         - 上述行為之後直接return就好，不用設定其他。\n
         - 需要在`running_window.is_cancel_task`為True時返回。\n
-        - 定期向`running_window.progress_var_queue` .put()進度值，否則將不會有進度顯示。\n
+        - 定期向`running_window.progress_var`改變進度值，否則將不會有進度顯示。\n
 
         :param execute_list: 一個可執行項目或待執行清單，如果是清單，那麼將由第一個開始執行，直到完成輸出才會再執行下一個。\n
                              每個函數都需要在當中加入`running_window`參數。
@@ -54,16 +53,17 @@ class RunningWindow:
 
         self.show_and_create_widget()
 
-        self.progress_msg_queue = queue.Queue()
-        self.progress_var_queue = queue.Queue()
+        self.progress_msg = "準備中"
+        self.progress_var = 0
 
         #序列執行，依次執行內容
         def total_functions() -> None:
             for function, args, callback_function, progress_msg in zip(self.execute_list, self.args_list, self.callback_function_list, self.progress_msgs):
-                self.progress_msg_queue.put(progress_msg)
+                self.progress_msg = progress_msg
+                self.progress_var = 0
 
                 if not isinstance(args,tuple):
-                    raise Exception("請確認輸入的args為tuple(若為單項tuple則須於末端加上逗號)")
+                    raise Exception("Please check your args' type is tuple")
 
                 result = function(*args,running_window = self)
 
@@ -75,7 +75,7 @@ class RunningWindow:
 
         #單一執行
         def single_function() -> None:
-            self.progress_msg_queue.put(self.progress_msgs)
+            self.progress_msg = self.progress_msgs
             result = self.execute_list(*self.args_list,running_window = self)
             self.callback_function_list(result)
             
@@ -112,7 +112,8 @@ class RunningWindow:
 
         self.progress_bar = ttk.Progressbar(master=self.toplevel,
                                             length=200,
-                                            mode='determinate')
+                                            mode='determinate',
+                                            maximum=100)
         self.progress_bar.pack(side="left")
 
         self.cancel_btn = ttk.Button(master=self.toplevel,
@@ -134,20 +135,10 @@ class RunningWindow:
             return
         
         #更新畫面進度值
-        try:
-            progress = self.progress_var_queue.get_nowait()
-        except queue.Empty:
-            progress = self.progress_bar["value"]
-        
-        self.progress_bar["value"] = progress
+        self.progress_bar["value"] = self.progress_var
 
         #更新文字
-        try:
-            progress_msg = self.progress_msg_queue.get_nowait()
-        except queue.Empty:
-            progress_msg = self.label_text.get()
-        
-        self.label_text.set(progress_msg)
+        self.label_text.set(self.progress_msg)
         
         #擷取錯誤並彈窗顯示
         if self.exception is not None:
@@ -160,4 +151,4 @@ class RunningWindow:
             self.toplevel.destroy()
             return 
         
-        self.toplevel.after(ms=1000,func=self.update_task)
+        self.toplevel.after(ms=50,func=self.update_task)

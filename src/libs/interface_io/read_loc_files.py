@@ -54,7 +54,7 @@ def read_loc_files(root:Root,running_window:RunningWindow) -> None:
         read_loc_file(running_window,loc_file)
         if running_window.is_cancel_task:
             break
-        running_window.progress_var_queue.put(int(((index+1)/loc_file_count)*100))
+        running_window.progress_var = int(((index+1)/loc_file_count)*100)
     
     if running_window.is_cancel_task:
         return

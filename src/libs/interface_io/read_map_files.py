@@ -37,7 +37,7 @@ def read_map_files(root:Root,running_window) -> None:
     supply_nodes_data = read_supply_node_file(map_file_path.joinpath("supply_nodes.txt").as_posix())
     railway_data = read_railway_file(map_file_path.joinpath("railways.txt").as_posix())
     
-    running_window.progress_var_queue.put(50)
+    running_window.progress_var = 50
 
     strategicregion_data = dict()
     strategicregion_files = list(strategicregions_file_path.rglob("*txt"))
@@ -45,7 +45,7 @@ def read_map_files(root:Root,running_window) -> None:
         data = pdxread(file)
         strategicregion_id = int(data[0].value[0].value)
         strategicregion_data[strategicregion_id] = data
-        running_window.progress_var_queue.put(50+int((counter+1)/strategicregions_file_count)*50)
+        running_window.progress_var = 50+int((counter+1)/strategicregions_file_count)*50
     
     return {"provionce":province_definitions,
                         "adjacency":adjacencies_data,

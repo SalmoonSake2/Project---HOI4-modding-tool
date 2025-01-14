@@ -60,19 +60,19 @@ class App:
             callback_function_list = list()
             progress_msgs = list()
 
+            def append_mission(mission,args,callback,msg):
+                execute_list.append(mission)
+                args_list.append(args)
+                callback_function_list.append(callback)
+                progress_msgs.append(msg)
+
             #本地化文檔
-            execute_list.append(read_loc_files)
-            args_list.append((self.root,))
             def set_loc(x): self.root.loc_data = x
-            callback_function_list.append(set_loc)
-            progress_msgs.append("建立本地化文檔")
+            append_mission(read_loc_files,(self.root,),set_loc,"建立本地化文檔")
 
             #地圖
-            execute_list.append(read_map_files)
-            args_list.append((self.root,))
             def set_map(x): self.root.map_data = x
-            callback_function_list.append(set_map)
-            progress_msgs.append("讀取地圖")
+            append_mission(read_map_files,(self.root,),set_map,"讀取地圖")
 
             #書籤
 
