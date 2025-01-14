@@ -8,18 +8,15 @@ import pandas as pd
 from pathlib import Path
 
 from libs.root import Root
-from libs.interface.abstract_progress_window import Abstract_progress_window as abspw
 from libs.pdxscript.pdxscript_convert import read as pdxread
 from libs.util.map_data_reader import read_railway_file, read_supply_node_file
 
-def read_map_files(prev:abspw,root:Root) -> None:
+def read_map_files(root:Root,running_window) -> None:
     '''
     讀取地圖檔案，相關技術細節可以參閱\n
     https://hoi4.paradoxwikis.com/Map_modding#Provinces
 
     :param root: 根視窗
-    :param result_queue: 結果回傳佇列
-    :param progress_queue: 進度回傳佇列
     '''
 
     map_file_path = Path(root.hoi4path).joinpath("map")
@@ -40,7 +37,7 @@ def read_map_files(prev:abspw,root:Root) -> None:
     supply_nodes_data = read_supply_node_file(map_file_path.joinpath("supply_nodes.txt").as_posix())
     railway_data = read_railway_file(map_file_path.joinpath("railways.txt").as_posix())
     
-    prev.progress_queue.put(50)
+    running_window.progress_var_queue.put(50)
 
     strategicregion_data = dict()
     strategicregion_files = list(strategicregions_file_path.rglob("*txt"))
@@ -48,13 +45,13 @@ def read_map_files(prev:abspw,root:Root) -> None:
         data = pdxread(file)
         strategicregion_id = int(data[0].value[0].value)
         strategicregion_data[strategicregion_id] = data
-        prev.progress_queue.put(50+int((counter+1)/strategicregions_file_count)*50)
+        running_window.progress_var_queue.put(50+int((counter+1)/strategicregions_file_count)*50)
     
-    prev.result_queue.put({"provionce":province_definitions,
+    return {"provionce":province_definitions,
                         "adjacency":adjacencies_data,
                         "adjacency_rule":adjacency_rules_data,
                         "continent":continent_data,
                         "season":seasons_data,
                         "supply_node":supply_nodes_data,
                         "railway":railway_data,
-                        "strategicregion":strategicregion_data})
+                        "strategicregion":strategicregion_data}

@@ -3,16 +3,15 @@ read_loc_files.py
 讀取本地化檔案
 '''
 
-import queue
 import re
 
 from pathlib import Path
 
 from libs.enum.enums import *
-from libs.interface.progress_window import Progress_window
+from libs.interface.running_window import RunningWindow
 from libs.root import Root
 
-def read_loc_files(prev:Progress_window,root:Root) -> None:
+def read_loc_files(root:Root,running_window:RunningWindow) -> None:
     '''
     讀取本地化文件
 
@@ -23,45 +22,45 @@ def read_loc_files(prev:Progress_window,root:Root) -> None:
     '''
     #檢驗路徑是否存在
     if root.hoi4path is None:
-        prev.expection = MISSING_PATH
-        raise Exception("The path is not given in instance self.root!")
+        running_window.exception = "The path is not given in instance self.root!"
+        return
 
     #估計檔案數(用於進度回傳)
     loc_file_path = Path(root.hoi4path).joinpath(f"localisation/{root.user_lang}")
 
     #檢驗路徑是否存在
     if not loc_file_path.exists() or not loc_file_path.is_dir():
-        prev.expection = INVALID_PATH
-        raise FileNotFoundError("Invalid path for Heart of Iron IV or mod")
+        running_window.exception= "Invalid path for Heart of Iron IV or mod"
+        return
 
     loc_file_count = sum(1 for file in loc_file_path.rglob("*yml") if file.is_file())
 
-    prev.localization_data = dict() #儲存輸出結果的字典
+    running_window.localization_data = dict() #儲存輸出結果的字典
 
     try:
         loc_files = list(loc_file_path.rglob("*yml"))
     
-    except PermissionError:
-        prev.expection = PERMISSION_ERROR
-        raise PermissionError(f"Do not has permission to reach path {loc_file_path}")
+    except PermissionError as e:
+        running_window.exception = e
+        return
 
     #檢查是否正確取得本地化文本
     if not loc_files:
-        prev.expection = NO_LOC_FILES
-        raise FileNotFoundError(f"Cannot find any localisation files at {loc_file_path}. Please check your directary.")
+        running_window.exception = f"Cannot find any localisation files at {loc_file_path}. Please check your directary."
+        return 
 
     #依序處理每個yml檔並更新進度
     for index,loc_file in enumerate(loc_files):
-        read_loc_file(prev,loc_file)
-        if prev.is_cancel_task:
+        read_loc_file(running_window,loc_file)
+        if running_window.is_cancel_task:
             break
-        prev.progress_queue.put(int(((index+1)/loc_file_count)*100))
+        running_window.progress_var_queue.put(int(((index+1)/loc_file_count)*100))
     
-    if prev.is_cancel_task:
+    if running_window.is_cancel_task:
         return
     
     #輸出檔案
-    prev.result_queue.put(prev.localization_data)
+    return running_window.localization_data
 
 def read_loc_file(prev,loc_file:str) -> None:
     '''
@@ -81,6 +80,5 @@ def read_loc_file(prev,loc_file:str) -> None:
 
                 if prev.is_cancel_task:
                     break
-    except FileNotFoundError:
-        prev.expection = FILE_NOT_FOUND
-        raise FileNotFoundError(f"Cannot find the file {loc_file}")
+    except FileNotFoundError as e:
+        prev.exception = e

@@ -3,6 +3,7 @@ progress_window.py
 用於呈現加載資料的視窗
 '''
 
+import time
 from typing import Callable
 import queue
 import threading
@@ -15,14 +16,16 @@ class Progress_window:
                  target:Callable,
                  args:tuple = (),
                  callback_function:Callable = None,
+                 wait_until:Callable = lambda:True,
                  prev: ttk.Toplevel | ttk.Window = None,
                  title:str = "提示",
                  progress_msg:str = "執行中") -> None:
         '''
-        建立視窗並以`args`為參數執行`target`。
+        建立視窗並以`args`為參數執行`target`，如果指定了wait_until，則wait_until為True時才會開始執行。
         :param target: 執行對象
         :param args: 執行參數
         :param callback_function: 回傳函數
+        :param wait_until: 等待該判斷式為True時便會執行
         :param prev: 引用的視窗
         :param title: 標題
         :param progress_msg: 執行時顯示的字串
@@ -31,6 +34,7 @@ class Progress_window:
         self.target = target
         self.args = args
         self.callback_function = callback_function
+        self.wait_until = wait_until
         self.prev = prev
         self.title = title
         self.progress_msg = progress_msg
@@ -43,11 +47,17 @@ class Progress_window:
         self.result_queue = queue.Queue()   #結果回傳佇列
         self.progress_queue = queue.Queue() #進度回傳佇列
         self.decorated_args = tuple([self]+list(self.args))
-        thread = threading.Thread(target=self.target,
-                                  daemon=True,
-                                  args=self.decorated_args)
-        thread.start()
 
+        def waiting_to_run(expression:Callable,function:Callable,args:tuple) -> None:
+            while not expression():
+                time.sleep(0.1) #檢查太快會導致CPU當機
+            function(*args)
+
+        waiting_thread = threading.Thread(target=waiting_to_run,daemon=True,args=(self.wait_until,
+                                                                                  self.target,
+                                                                                  self.decorated_args))
+
+        waiting_thread.start()
         self.update_task()
     
     def show_and_create_widget(self) -> None:
@@ -93,7 +103,8 @@ class Progress_window:
         
         #擷取錯誤
         if self.expection is not None:
-            msg.show_warning(message=self.expection,title="錯誤!",parent=self.prev)
+            msg.show_warning(message=str(self.expection),title="錯誤!",parent=self.prev)
+            self.toplevel.destroy()
             return
         
         #嘗試獲取資料，如果沒有則更新進度條

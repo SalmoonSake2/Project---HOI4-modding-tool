@@ -21,10 +21,10 @@ class Root(ttk.Window):
         self.user_lang: str = "simp_chinese"
 
         #本地化文件
-        self.loc_data: dict = dict()
+        self.loc_data: dict = None
 
         #地圖資訊
-        self.map_data:dict = dict()
+        self.map_data:dict = None
 
         #是否更新介面
         self.has_updated: bool = True
