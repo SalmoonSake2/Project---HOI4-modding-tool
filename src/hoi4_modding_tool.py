@@ -52,7 +52,7 @@ class App:
         sel_mod_dir_btn.pack(pady=20)
     
     def update_task(self) -> None:
-        #檢查是否設定剛四資料夾
+        #檢查是否設定鋼四資料夾
         if not self.root.has_updated and self.root.hoi4path is not None:
             
             execute_list = list()
@@ -67,12 +67,12 @@ class App:
                 progress_msgs.append(msg)
 
             #本地化文檔
-            def set_loc(x): self.root.loc_data = x
-            append_mission(read_loc_files,(self.root,),set_loc,"建立本地化文檔")
+            def set_loc_data(x): self.root.loc_data = x
+            append_mission(read_loc_files,(self.root,),set_loc_data,"建立本地化文檔")
 
             #地圖
-            def set_map(x): self.root.map_data = x
-            append_mission(read_map_files,(self.root,),set_map,"讀取地圖")
+            def set_map_data(x): self.root.map_data = x
+            append_mission(read_map_files,(self.root,),set_map_data,"讀取地圖")
 
             #書籤
 
@@ -150,10 +150,13 @@ class App:
 
             #頭像
 
-            RunningWindow(execute_list,args_list,callback_function_list,self.root,"執行中",progress_msgs)
+            #按鈕設定
+            def update_btn(running_window): self.character_btn.config(state="normal")
+            append_mission(update_btn,(),None,"更新畫面")
 
+            RunningWindow(execute_list,args_list,callback_function_list,self.root,"執行中",progress_msgs)
             self.root.has_updated = True
-            self.character_btn.config(state="normal")
+            
 
         self.root.after(ms=100,func=self.update_task)
     

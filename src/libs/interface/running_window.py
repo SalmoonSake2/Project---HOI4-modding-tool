@@ -69,8 +69,8 @@ class RunningWindow:
 
                 if self.exception is not None: return
 
-                callback_function(result)
-            
+                if callback_function is not None: callback_function(result)
+                    
             self.is_done = True
 
         #單一執行

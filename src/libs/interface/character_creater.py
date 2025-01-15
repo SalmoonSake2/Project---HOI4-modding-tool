@@ -19,13 +19,11 @@
 '''
 
 from tkinter import filedialog
-from ttkbootstrap.dialogs import Messagebox as msg
+
+from pathlib import Path
 from PIL import Image, ImageTk
 import ttkbootstrap as ttk
-import os
-
-from libs.interface.trait_creater import Trait_creater
-from libs.interface.trait_selecter import Trait_selecter
+from ttkbootstrap.dialogs import Messagebox as msg
 
 class Character_creater:
     '''
@@ -50,9 +48,9 @@ class Character_creater:
             建立圖檔，會從../../../assets中尋找同名的png、dds檔，並轉為tkinter可以處理的格式
             '''
             try:
-                return ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), "../../../assets", f"{file_name}.png")))
+                return ImageTk.PhotoImage(Image.open(Path(__file__).parent / "../../../assets" / f"{file_name}.png"))
             except:
-                return ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), "../../../assets", f"{file_name}.dds")))
+                return ImageTk.PhotoImage(Image.open(Path(__file__).parent / "../../../assets" / f"{file_name}.dds"))
             
         def create_upper_frame() -> None:
             #建立相片及描述frame
@@ -74,7 +72,7 @@ class Character_creater:
                 if file_path:
                     photo = ImageTk.PhotoImage(Image.open(file_path).resize((155,212)))
                 else:
-                    photo = ImageTk.PhotoImage(Image.open(f"{os.path.dirname(__file__)}/../../../assets/unknown_character.png"))
+                    photo = ImageTk.PhotoImage(Image.open(Path(__file__).parent / "../../../assets/unknown_character.png"))
 
                 photo_frame.itemconfig(photo_image_id,image= photo)
                 photo_frame.photo_image = photo
@@ -90,7 +88,7 @@ class Character_creater:
                 if file_path:
                     photo = ImageTk.PhotoImage(Image.open(file_path).resize((63,66)))
                 else:
-                    photo = ImageTk.PhotoImage(Image.open(f"{os.path.dirname(__file__)}/../../../assets/unknown_advisor.dds"))
+                    photo = ImageTk.PhotoImage(Image.open(Path(__file__).parent / "../../../assets/unknown_advisor.dds"))
 
                 photo_frame.itemconfig(advisor_image_id,image= photo)
                 photo_frame.advisor_image = photo
@@ -201,10 +199,10 @@ class Character_creater:
         def trait_btn_command() -> None:
             response = msg.yesno(message="是否新建一個新的特質?",title="提示",parent=toplevel)
             if response == "Yes":
-                Trait_creater(toplevel,self.root)
+                print(self.root.loc_data)
             
             elif response == "No":
-                Trait_selecter(toplevel,self.root)
+                ...
 
         traits_btn = ttk.Button(master=trait_frame,text="新增",style="outline",command=trait_btn_command)
         traits_btn.pack(side="left")
