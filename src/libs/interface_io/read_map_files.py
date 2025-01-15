@@ -123,4 +123,5 @@ def read_map_files(root:Root,running_window:RunningWindow) -> None:
             "season":seasons_data,
             "supply_node":supply_nodes_data,
             "railway":railway_data,
+            "state": state_data,
             "strategicregion":strategicregion_data}

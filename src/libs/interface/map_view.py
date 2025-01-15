@@ -23,3 +23,4 @@ class Mapview:
         #繪製省分、河流、高度圖、地形外觀、樹種、設定資料
         #導入n貼圖、unitstack、buildings
         #繪製鐵路、補給基地
+        print(self.root.map_data)
