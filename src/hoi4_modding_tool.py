@@ -9,6 +9,7 @@ from libs.root import Root
 from libs.interface_io.read_loc_files import read_loc_files
 from libs.interface_io.read_map_files import read_map_files
 from libs.interface.character_creater import Character_creater
+from libs.interface.map_view import Mapview
 from libs.interface.running_window import RunningWindow
 
 class App:
@@ -30,12 +31,22 @@ class App:
                                         text="角色創建器",
                                         command=character_btn_command,
                                         state="disabled")
-        self.character_btn.pack()
+        self.character_btn.pack(pady=20)
+
+        def map_view_btn_command() -> None:
+            Mapview(self.root)
+
+        self.map_view_btn = ttk.Button(master=self.root,
+                                     text="地圖檢視器",
+                                     command=map_view_btn_command,
+                                     state="disabled")
+        self.map_view_btn.pack(pady=20)
 
         def sel_dir_btn_command() -> None:
             resp = filedialog.askdirectory()
-            if resp: self.root.hoi4path = resp
-            self.root.has_updated = False
+            if resp: 
+                self.root.hoi4path = resp
+                self.root.has_updated = False
 
         sel_dir_btn = ttk.Button(master=self.root,
                                  text="選擇鋼四資料夾",
@@ -151,7 +162,9 @@ class App:
             #頭像
 
             #按鈕設定
-            def update_btn(running_window): self.character_btn.config(state="normal")
+            def update_btn(running_window): 
+                self.character_btn.config(state="normal")
+                self.map_view_btn.config(state="normal")
             append_mission(update_btn,(),None,"更新畫面")
 
             RunningWindow(execute_list,args_list,callback_function_list,self.root,"執行中",progress_msgs)
