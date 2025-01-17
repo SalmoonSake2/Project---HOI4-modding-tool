@@ -123,7 +123,7 @@ def read_map_files(root:Root,running_window:RunningWindow) -> None:
         running_window.exception = f"讀取{file_reading}出現錯誤:{e}"
         return
     
-    return {"provionce":province_definitions,
+    return {"province":province_definitions,
             "adjacency":adjacencies_data,
             "adjacency_rule":adjacency_rules_data,
             "continent":continent_data,

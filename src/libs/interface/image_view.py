@@ -10,6 +10,7 @@ class Imageview(ttk.Canvas):
     def __init__(self, 
                  image:Image.Image | None = None,
                  scale_restrction: tuple = (0.1, 10), 
+                 always_bg:bool = True,
                  **kwargs):
         '''
         Construct a imageview widget with the parent master.
@@ -33,7 +34,12 @@ class Imageview(ttk.Canvas):
         #當前窗口在圖像上的偏移座標
         self.offset_x, self.offset_y = (0, 0)
 
-        self.create_image(0, 0, image=self.image_tk, anchor=ttk.NW)
+        self.always_bg = always_bg
+
+        self.create_image(0, 0, image=self.image_tk, anchor=ttk.NW,tag="_image")
+
+        if self.always_bg:
+            self.tag_lower("_image")
 
         # 配置互動(滾輪縮放、拖曳)
         self.bind("<MouseWheel>", self._zoom)
@@ -111,10 +117,14 @@ class Imageview(ttk.Canvas):
 
             # 更新顯示圖像
             self.image_tk = ImageTk.PhotoImage(scaled_cropped_img)
-            self.delete("all")
+            self.delete("_image")
             self.create_image(
                 self.offset_x + view_x0 * self.image_scale_factor,
                 self.offset_y + view_y0 * self.image_scale_factor,
                 image=self.image_tk,
                 anchor=ttk.NW,
+                tag="_image"
             )
+
+            if self.always_bg:
+                self.tag_lower("_image")
