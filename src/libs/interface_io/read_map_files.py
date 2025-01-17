@@ -9,7 +9,7 @@ from pathlib import Path
 
 from libs.interface.running_window import RunningWindow
 from libs.root import Root
-from libs.pdxscript.pdxscript_convert import read as pdxread
+from libs.pdxscript.pdxscript import read as pdxread
 from libs.util.map_data_reader import read_railway_file, read_supply_node_file
 
 def read_map_files(root:Root,running_window:RunningWindow) -> None:
@@ -83,6 +83,7 @@ def read_map_files(root:Root,running_window:RunningWindow) -> None:
 
     try:
         state_data = dict()
+        state_province_mapping = dict()
         state_files = list(state_file_path.rglob("*txt"))
 
         file_reading = None
@@ -90,7 +91,13 @@ def read_map_files(root:Root,running_window:RunningWindow) -> None:
 
             file_reading = file
             data = pdxread(file)
-            state_id = int(data[0].value[0].value)
+
+            state_id = int(data[0]["id"])
+
+            #列出其擁有的所有省分
+            provinces = data[0]["provinces"]
+            state_province_mapping[state_id] = provinces
+            
             state_data[state_id] = data
 
             running_window.progress_var = 30+int((counter+1)/strategicregions_file_count)*40
@@ -107,7 +114,7 @@ def read_map_files(root:Root,running_window:RunningWindow) -> None:
 
             file_reading = file
             data = pdxread(file)
-            strategicregion_id = int(data[0].value[0].value)
+            strategicregion_id = int(data[0]["id"])
             strategicregion_data[strategicregion_id] = data
 
             running_window.progress_var = 70+int((counter+1)/strategicregions_file_count)*30
@@ -124,4 +131,5 @@ def read_map_files(root:Root,running_window:RunningWindow) -> None:
             "supply_node":supply_nodes_data,
             "railway":railway_data,
             "state": state_data,
+            "state-province": state_province_mapping,
             "strategicregion":strategicregion_data}

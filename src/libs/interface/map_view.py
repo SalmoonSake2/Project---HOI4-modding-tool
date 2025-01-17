@@ -2,8 +2,10 @@
 map_view.py
 '''
 
+from PIL import Image
 import ttkbootstrap as ttk
 
+from libs.interface.image_view import Imageview
 from libs.root import Root
 
 class Mapview:
@@ -18,9 +20,11 @@ class Mapview:
                             size=(750,570),
                             transient=self.root)
         
+        imageview = Imageview(master=toplevel,height=570,width=700,image=Image.open(self.root.hoi4path+"/map/provinces.bmp"))
+        imageview.pack(side="left")
         #檢視province, state, strategic region
         #縮放
         #繪製省分、河流、高度圖、地形外觀、樹種、設定資料
         #導入n貼圖、unitstack、buildings
         #繪製鐵路、補給基地
-        print(self.root.map_data)
+        

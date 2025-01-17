@@ -199,7 +199,7 @@ class Character_creater:
         def trait_btn_command() -> None:
             response = msg.yesno(message="是否新建一個新的特質?",title="提示",parent=toplevel)
             if response == "Yes":
-                print(self.root.loc_data)
+                ...
             
             elif response == "No":
                 ...

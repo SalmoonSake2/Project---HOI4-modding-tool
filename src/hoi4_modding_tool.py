@@ -2,8 +2,11 @@
 entry point of the software
 '''
 
-import ttkbootstrap as ttk
+
 from tkinter import filedialog
+
+from pathlib import Path
+import ttkbootstrap as ttk
 
 from libs.root import Root
 from libs.interface_io.read_loc_files import read_loc_files
@@ -19,9 +22,16 @@ class App:
                          size=(400,300))
 
         self.show_and_create_widget()
+        self.find_hoi4_path()
         self.update_task()
         self.root.mainloop()
     
+    def find_hoi4_path(self) -> None:
+        if Path("C:/Program Files (x86)/Steam/steamapps/common/Hearts of Iron IV").exists():
+            self.root.hoi4path = "C:/Program Files (x86)/Steam/steamapps/common/Hearts of Iron IV"
+            self.root.first_try_hoi4_path = True
+            self.root.has_updated = False
+
     def show_and_create_widget(self) -> None:
         
         def character_btn_command() -> None:
@@ -48,10 +58,10 @@ class App:
                 self.root.hoi4path = resp
                 self.root.has_updated = False
 
-        sel_dir_btn = ttk.Button(master=self.root,
+        self.sel_dir_btn = ttk.Button(master=self.root,
                                  text="選擇鋼四資料夾",
                                  command=sel_dir_btn_command)
-        sel_dir_btn.pack(pady=20)
+        self.sel_dir_btn.pack(pady=20)
 
         def sel_mod_dir_btn_command() -> None:
             resp = filedialog.askdirectory()
@@ -165,11 +175,11 @@ class App:
             def update_btn(running_window): 
                 self.character_btn.config(state="normal")
                 self.map_view_btn.config(state="normal")
+                self.sel_dir_btn.config(state="disabled")
             append_mission(update_btn,(),None,"更新畫面")
 
             RunningWindow(execute_list,args_list,callback_function_list,self.root,"執行中",progress_msgs)
             self.root.has_updated = True
             
-
         self.root.after(ms=100,func=self.update_task)
     

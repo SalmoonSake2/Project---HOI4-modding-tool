@@ -64,7 +64,7 @@ class RunningWindow:
 
                 if not isinstance(args,tuple):
                     raise Exception("Please check your args' type is tuple")
-
+                
                 result = function(*args,running_window = self)
 
                 if self.exception is not None: return
@@ -142,7 +142,10 @@ class RunningWindow:
         
         #擷取錯誤並彈窗顯示
         if self.exception is not None:
-            msg.show_warning(message=str(self.exception),title="錯誤!",parent=self.prev)
+            if not self.prev.first_try_hoi4_path:
+                msg.show_warning(message=str(self.exception),title="錯誤!",parent=self.prev)
+            else:
+                self.prev.first_try_hoi4_path = False
             self.toplevel.destroy()
             return
         
