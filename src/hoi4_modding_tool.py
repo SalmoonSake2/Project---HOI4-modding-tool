@@ -12,7 +12,7 @@ import ttkbootstrap as ttk
 from libs.interface.character_creater import Character_creater
 from libs.interface.map_view import Mapview
 from libs.interface.running_window import RunningWindow
-from libs.reader import read_loc_files, read_map_files, create_state_map_image
+from libs.reader import *
 from libs.root import Root
 
 class App:
@@ -96,83 +96,17 @@ class App:
             append_mission(read_map_files,(self.root,),set_map_data,"讀取地圖")
 
             def set_state_map(x): self.root.state_map = x
-            append_mission(create_state_map_image,(self.root,),set_state_map,"繪製地圖")
-
-            #書籤
-
-            #權力平衡
-
-            #建築
-
-            #腳色 @優先
-
-            #持續性國策
+            append_mission(create_state_map_image,(self.root,),set_state_map,"繪製地塊地圖")
 
             #國家文化、顏色 @優先
+            def set_country_tag(x): self.root.country_tag = x
+            append_mission(read_country_tag_file,(self.root,),set_country_tag,"讀取國家代碼")
 
-            #領導人、顧問特質 @優先
+            def set_country_color(x): self.root.country_color = x
+            append_mission(read_country_color,(self.root,),set_country_color,"讀取國家配色")
 
-            #繼承國家代碼
-
-            #國家代碼 @優先
-
-            #決議 @優先
-
-            #動態修飾
-
-            #國家精神 @優先
-
-            #意識形態
-
-            #情報局
-
-            #軍功組織
-
-            #靜態修飾
-
-            #名字
-
-            #國策 @優先
-
-            #on action
-
-            #外交態度
-
-            #間諜行動
-
-            #突襲
-
-            #資源
-
-            #建築
-
-            #編寫式內容
-
-            #特殊項目
-
-            #科技
-
-            #科技共享
-
-            #科技標籤
-
-            #將領特質
-
-            #勳章
-
-            #編制標籤
-
-            #編制
-
-            #事件 @優先
-
-            #歷史 @優先
-
-            #介面與gfx @優先
-
-            #音樂
-
-            #頭像
+            def set_nation_map(x): self.root.nation_map = x
+            append_mission(create_nation_map_image,(self.root,),set_nation_map,"繪製政權地圖")
 
             #按鈕設定
             def update_btn(running_window): 

@@ -25,7 +25,14 @@ class Root(ttk.Window):
 
         #地圖資訊
         self.map_data:dict = None
+        self.state_color:dict = None
         self.state_map:Image.Image = None
+        self.nation_map:Image.Image = None
+        self.state_country_color_mapping:dict = None #state顏色對上國家TAG
+
+        #國家
+        self.country_tag:dict = None                #國家TAG對上檔案名稱
+        self.country_color:dict[tuple[int]] = None  #國家TAG對上顏色
 
         #是否更新介面
         self.has_updated: bool = True

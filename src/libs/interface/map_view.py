@@ -50,7 +50,7 @@ class Mapview:
         loc = ("省分","地塊","戰略區","政權","河流","高度圖","地形")
         view_mode_loc = dict(zip(view_mode,loc))
 
-        btn_command = (self.province_mode,self.state_mode,None,None,self.river_mode,self.heightmap_mode,self.terrain_mode)
+        btn_command = (self.province_mode,self.state_mode,None,self.nation_mode,self.river_mode,self.heightmap_mode,self.terrain_mode)
         view_mode_btn_command = dict(zip(view_mode,btn_command))
 
         view_mode_button = dict()
@@ -184,6 +184,18 @@ class Mapview:
             except:
                 self.imageview.itemconfig("_text",text="")
 
+        elif self.mode == "nation":
+            #獲取當前所指顏色
+            color = self.root.state_map.getpixel((img_x, img_y))
+
+            #以顏色獲取國家TAG
+            try:
+                country_tag = self.root.state_country_color_mapping[color]
+
+                self.imageview.itemconfig("_text",text=f"{self.root.loc_data[country_tag+"_ADJ"]}({country_tag})")
+            except:
+                self.imageview.itemconfig("_text",text="")
+
         self.imageview.itemconfig("_coord",text=f"座標:({img_x},{img_y})")
                 
     def river_mode(self) -> None:
@@ -205,3 +217,7 @@ class Mapview:
     def state_mode(self) -> None:
         self.mode = "state"
         self.imageview.set_image(self.root.state_map)
+
+    def nation_mode(self) -> None:
+        self.mode = "nation"
+        self.imageview.set_image(self.root.nation_map)

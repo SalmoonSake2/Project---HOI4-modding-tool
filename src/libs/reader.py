@@ -2,7 +2,7 @@
 reader.py
 讀取文檔相關的操作
 '''
-
+import colorsys
 import re
 
 import numpy as np
@@ -12,9 +12,10 @@ from PIL import Image
 from libs.interface.running_window import RunningWindow
 from libs.map import Province, State
 from libs.pdxscript import read as pdxread
+from libs.pdxscript import PDXstatement
 from libs.root import Root
 
-def read_loc_files(root:Root,running_window:RunningWindow) -> None:
+def read_loc_files(root:Root,running_window:RunningWindow) -> dict:
     '''
     讀取本地化文件
 
@@ -284,7 +285,89 @@ def create_state_map_image(root:Root,running_window:RunningWindow) -> Image.Imag
             #繪製
             pixels[x,y] = state_definition[state.id]
 
-        running_window.progress_var = int(((x*h)/(w*h))*100)
+        running_window.progress_var = int((x/w)*100)
+    
+    root.state_color = state_definition
     
     return province_image
-                
+
+def read_country_tag_file(root:Root,running_window:RunningWindow) -> dict:
+    '''
+    讀取國家代碼
+    '''
+    country_tag_file_path = Path(root.hoi4path + "/common/country_tags")
+
+    country_tag_files = list(country_tag_file_path.rglob("*txt"))
+
+    country_tags = dict()
+    for country_tag_file in country_tag_files:
+        country_tag_pdxscript = pdxread(country_tag_file)
+        for statement in country_tag_pdxscript:
+            country_tags[statement.keyword] = statement.value.strip('"')
+            if running_window.is_cancel_task: return
+    
+    return country_tags
+
+def read_country_color(root:Root,running_window:RunningWindow) -> dict[str,tuple[int]]:
+    '''
+    讀取國家顏色
+    '''
+    country_color_file_path = Path(root.hoi4path+"/common/countries/colors.txt")
+
+    color_data = ""
+
+    with open(country_color_file_path,"r",encoding="utf-8") as file:
+        for line in file:
+            if running_window.is_cancel_task: return
+            color_data += line
+
+    pattern_rgb = re.compile(r'(\w+)\s*=\s*\{\s*color\s*=\s*rgb\s*\{\s*(\d+)\s+(\d+)\s+(\d+)\s*\}', re.DOTALL)
+    pattern_hsv = re.compile(r'(\w+)\s*=\s*\{\s*color\s*=\s*hsv\s*\{\s*([\d.]+)\s+([\d.]+)\s+([\d.]+)\s*\}', re.DOTALL)
+
+    result_rgb = {match[1]: (int(match[2]), int(match[3]), int(match[4])) for match in pattern_rgb.finditer(color_data)}
+    result_hsv = {match[1]: (float(match[2]), float(match[3]), float(match[4])) for match in pattern_hsv.finditer(color_data)}
+    for country_tag in result_hsv:
+        r, g, b = colorsys.hsv_to_rgb(*result_hsv[country_tag])
+        result_hsv[country_tag] = (int(r*255),int(g*255),int(b*255))
+    
+    return (result_rgb | result_hsv)
+
+def create_nation_map_image(root:Root,running_window:RunningWindow) -> Image.Image:
+    '''
+    建立開局時的政權地圖
+    '''
+    nation_map_image = root.state_map.copy()
+
+    pixels = nation_map_image.load()
+
+    #建立state顏色對國家顏色的配對
+    state_country_color_mapping = dict()
+    root.state_country_color_mapping = dict()
+
+    #逐一輸入state可能的顏色進行計算
+    for state_id in root.state_color:
+        state_history_data = PDXstatement("history",root.map_data["state"][state_id][0]["history"])
+        country_tag = state_history_data["owner"]
+        try:
+            country_color = root.country_color[country_tag]
+        except:
+            country_color = (20,20,20)
+        state_country_color_mapping[root.state_color[state_id]] = country_color
+        root.state_country_color_mapping[root.state_color[state_id]] = country_tag
+    
+    
+    #對每個像素進行繪製
+    w,h = nation_map_image.size
+
+    for x in range(w):
+        for y in range(h):
+            try:
+                pixels[x,y] = state_country_color_mapping[pixels[x,y]]
+            except KeyError:
+                pixels[x,y] = (0,0,0)
+
+            if running_window.is_cancel_task: return
+
+        running_window.progress_var = int((x/w)*100)
+    
+    return nation_map_image
