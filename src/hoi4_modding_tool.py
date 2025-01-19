@@ -12,7 +12,7 @@ import ttkbootstrap as ttk
 from libs.interface.character_creater import Character_creater
 from libs.interface.map_view import Mapview
 from libs.interface.running_window import RunningWindow
-from libs.reader import read_loc_files, read_map_files
+from libs.reader import read_loc_files, read_map_files, create_state_map_image
 from libs.root import Root
 
 class App:
@@ -94,6 +94,9 @@ class App:
             #地圖
             def set_map_data(x): self.root.map_data = x
             append_mission(read_map_files,(self.root,),set_map_data,"讀取地圖")
+
+            def set_state_map(x): self.root.state_map = x
+            append_mission(create_state_map_image,(self.root,),set_state_map,"繪製地圖")
 
             #書籤
 

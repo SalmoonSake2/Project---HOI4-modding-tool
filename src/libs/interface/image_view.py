@@ -138,3 +138,10 @@ class Imageview(ttk.Canvas):
 
         if self.always_bg:
             self.tag_lower("_image_28a391cf82739")
+    
+    def set_image(self,image) -> None:
+        '''
+        設定圖片
+        '''
+        self.image = image
+        self._render_task()

@@ -7,8 +7,10 @@ import re
 
 import numpy as np
 from pathlib import Path
+from PIL import Image
 
 from libs.interface.running_window import RunningWindow
+from libs.map import Province, State
 from libs.pdxscript import read as pdxread
 from libs.root import Root
 
@@ -237,3 +239,52 @@ def read_map_files(root:Root,running_window:RunningWindow) -> None:
             "state": state_data,
             "state-province": state_province_mapping,
             "strategicregion":strategicregion_data}
+
+def create_state_map_image(root:Root,running_window:RunningWindow) -> Image.Image:
+    '''
+    建立以state為內容的地圖圖片
+    '''
+    province_image = Image.open(root.hoi4path + "/map/provinces.bmp")
+    w,h = province_image.size
+
+    pixels = province_image.load()
+
+    state_definition = dict() #dict[list]，代表特定state id 之下的province顏色指派
+    recorded_state = set()
+
+    #預先建立查詢表以加快速度
+    avalible_color = set()
+
+    for province_data in root.map_data["province"]:
+        r = province_data["r"]
+        g = province_data["g"]
+        b = province_data["b"]
+        avalible_color.add((r,g,b))
+
+    color_to_state = {color : State.get_state_from_province(root,Province.get_province_from_color(root,color)) for color in avalible_color}
+
+    #對每個像素逐一檢查並修改
+    for x in range(w):
+        for y in range(h):
+            
+            #用戶中斷
+            if running_window.is_cancel_task: return
+
+            #獲取省分所在的地塊
+            state = color_to_state[pixels[x,y]]
+
+            #如果是海洋省份或未登記的省分，那就跳過該輪檢查
+            if state is None: continue
+                
+            #如果是尚未紀錄的省分
+            if state.id not in recorded_state:
+                state_definition[state.id] = pixels[x,y]
+                recorded_state.add(state.id)
+            
+            #繪製
+            pixels[x,y] = state_definition[state.id]
+
+        running_window.progress_var = int(((x*h)/(w*h))*100)
+    
+    return province_image
+                

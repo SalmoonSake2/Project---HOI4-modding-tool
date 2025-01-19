@@ -16,6 +16,7 @@ class Mapview:
 
     def __init__(self,root:Root) -> None:
         self.root = root
+        self.mode = "province"
         self.show_and_create_widget()
     
     def show_and_create_widget(self) -> None:
@@ -33,14 +34,17 @@ class Mapview:
         self.imageview.pack(side="left")
 
         self.imageview.create_rectangle(0,0,700,40,fill="#555555")
-        self.imageview.create_text(10,10,text="省分ID:",fill="#CCCCCC",font="Helvetica 18",anchor="nw",tags="_text")
-        self.imageview.create_text(10,530,text="座標:",fill="#CCCCCC",font="Helvetica 12",anchor="nw",tags="_coord")
+        self.imageview.create_text(10,10,text="省分ID:",fill="#CCCCCC",font="Helvetica 12",anchor="nw",tags="_text")
+        self.imageview.create_text(560,10,text="座標:",fill="#CCCCCC",font="Helvetica 12",anchor="nw",tags="_coord")
 
         self.imageview.bind("<Motion>", self.get_hover_color)
+        toplevel.bind("<KeyPress-r>",self.river_mode)
+        toplevel.bind("<KeyPress-p>",self.province_mode)
+        toplevel.bind("<KeyPress-h>",self.heightmap_mode)
+        toplevel.bind("<KeyPress-t>",self.terrain_mode)
+        toplevel.bind("<KeyPress-s>",self.state_mode)
 
         #檢視province, state, strategic region
-        #繪製省分、河流、高度圖、地形外觀、樹種、設定資料
-        #導入n貼圖、unitstack、buildings
         #繪製鐵路、補給基地
     
     def get_hover_color(self,event) -> None:
@@ -58,29 +62,69 @@ class Mapview:
         is_valid_position = 0 <= img_x < self.imageview.image.width and 0 <= img_y < self.imageview.image.height
 
         if not is_valid_position: return
+        
+        if self.mode == "province":
+
+            #獲取當前所指顏色
+            color = self.imageview.image.getpixel((img_x, img_y))
+
+            #以顏色獲取省分資料
+            province_data = Province.get_province_from_color(self.root,color)
+
+            terrain = province_data.terrain
+            state = State.get_state_from_province(self.root,province_data)
+
+            try:
+                province_name = f"({self.root.loc_data[f"VICTORY_POINTS_{province_data.id}"]})"
+            except:
+                province_name = ""
             
-        #獲取當前所指顏色
-        color = self.imageview.image.getpixel((img_x, img_y))
+            try:
+                state_name = self.root.loc_data[f"STATE_{state.id}"] + f"(#{state.id})的"
+            
+            except:
+                state_name = ""
 
-        #以顏色獲取省分資料
-        province_data = Province.get_province_from_color(self.root,color)
+            self.imageview.itemconfig("_text",text=f"{state_name}{self.root.loc_data[terrain]}省分(#{province_data.id} {province_name})")
 
-        terrain = province_data.terrain
-        state = State.get_state_from_province(self.root,province_data)
-
-        try:
-            province_name = f"({self.root.loc_data[f"VICTORY_POINTS_{province_data.id}"]})"
-        except:
-            province_name = ""
+        elif self.mode == "heightmap":
+            color = self.imageview.image.getpixel((img_x, img_y))
+            self.imageview.itemconfig("_text",text=f"高度:{color-95}")
         
-        try:
-            state_name = self.root.loc_data[f"STATE_{state.id}"] + f"(#{state.id})的"
-        
-        except:
-            state_name = ""
+        elif self.mode == "state":
+            #獲取當前所指顏色
+            color = self.imageview.image.getpixel((img_x, img_y))
 
-        self.imageview.itemconfig("_text",text=f"{state_name}{self.root.loc_data[terrain]}省分(#{province_data.id} {province_name})")
+            #以顏色獲取資料
+            province_data = Province.get_province_from_color(self.root,color)
+
+            state = State.get_state_from_province(self.root,province_data)
+
+            if state is None:
+                self.imageview.itemconfig("_text",text="海洋")
+
+            else:
+                self.imageview.itemconfig("_text",text=f"{self.root.loc_data["STATE_"+str(state.id)]}(#{state.id})")
+
         self.imageview.itemconfig("_coord",text=f"座標:({img_x},{img_y})")
                 
 
-        
+    def river_mode(self,event) -> None:
+        self.mode = "river"
+        self.imageview.set_image(Image.open(self.root.hoi4path+"/map/rivers.bmp"))
+    
+    def province_mode(self,event) -> None:
+        self.mode = "province"
+        self.imageview.set_image(Image.open(self.root.hoi4path+"/map/provinces.bmp"))
+    
+    def heightmap_mode(self,event) -> None:
+        self.mode = "heightmap"
+        self.imageview.set_image(Image.open(self.root.hoi4path+"/map/heightmap.bmp"))
+    
+    def terrain_mode(self,event) -> None:
+        self.mode = "terrain"
+        self.imageview.set_image(Image.open(self.root.hoi4path+"/map/terrain.bmp"))
+
+    def state_mode(self,event) -> None:
+        self.mode = "state"
+        self.imageview.set_image(self.root.state_map)

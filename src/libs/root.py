@@ -4,6 +4,7 @@ root.py
 繼承自ttk.Window的類型，儲存更多資訊如使用者變數與資訊
 '''
 
+from PIL import Image
 import ttkbootstrap as ttk
 
 class Root(ttk.Window):
@@ -24,6 +25,7 @@ class Root(ttk.Window):
 
         #地圖資訊
         self.map_data:dict = None
+        self.state_map:Image.Image = None
 
         #是否更新介面
         self.has_updated: bool = True
