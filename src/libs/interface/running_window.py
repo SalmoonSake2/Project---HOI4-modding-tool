@@ -11,6 +11,9 @@ import ttkbootstrap as ttk
 from ttkbootstrap.dialogs import Messagebox as msg
 
 class RunningWindow:
+    '''
+    進度條物件
+    '''
     
     def __init__(self,
                  execute_list: Callable | Iterable[Callable],

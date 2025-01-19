@@ -1,19 +1,19 @@
 '''
-entry point of the software
-'''
+hoi4_modding_tool.py
 
+程式的本體
+'''
 
 from tkinter import filedialog
 
 from pathlib import Path
 import ttkbootstrap as ttk
 
-from libs.root import Root
-from libs.interface_io.read_loc_files import read_loc_files
-from libs.interface_io.read_map_files import read_map_files
 from libs.interface.character_creater import Character_creater
 from libs.interface.map_view import Mapview
 from libs.interface.running_window import RunningWindow
+from libs.reader import read_loc_files, read_map_files
+from libs.root import Root
 
 class App:
     def __init__(self) -> None:

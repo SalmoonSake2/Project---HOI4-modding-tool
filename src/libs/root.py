@@ -5,7 +5,6 @@ root.py
 '''
 
 import ttkbootstrap as ttk
-import pandas as pd
 
 class Root(ttk.Window):
     def __init__(self,*args,**kwargs) -> None:

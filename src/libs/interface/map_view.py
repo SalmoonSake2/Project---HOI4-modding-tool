@@ -6,10 +6,13 @@ from PIL import Image
 import ttkbootstrap as ttk
 
 from libs.interface.image_view import Imageview
-from libs.interface_io.get_province_from_color import get_province_from_color
+from libs.map import Province, State
 from libs.root import Root
 
 class Mapview:
+    '''
+    地圖檢視器視窗
+    '''
 
     def __init__(self,root:Root) -> None:
         self.root = root
@@ -22,14 +25,16 @@ class Mapview:
                             transient=self.root)
         
         self.imageview = Imageview(master=toplevel,
-                              height=570,
-                              width=700,
-                              scale_restrction=(0.21,20),
-                              image=Image.open(self.root.hoi4path+"/map/provinces.bmp"))
+                                   height=570,
+                                   width=700,
+                                   scale_restrction=(0.21,20),
+                                   operation_key=("<MouseWheel>","<ButtonPress-2>","<B2-Motion>"),
+                                   image=Image.open(self.root.hoi4path+"/map/provinces.bmp"))
         self.imageview.pack(side="left")
 
-        self.imageview.create_rectangle(0,0,400,40,fill="#555555")
+        self.imageview.create_rectangle(0,0,700,40,fill="#555555")
         self.imageview.create_text(10,10,text="省分ID:",fill="#CCCCCC",font="Helvetica 18",anchor="nw",tags="_text")
+        self.imageview.create_text(10,530,text="座標:",fill="#CCCCCC",font="Helvetica 12",anchor="nw",tags="_coord")
 
         self.imageview.bind("<Motion>", self.get_hover_color)
 
@@ -40,28 +45,42 @@ class Mapview:
     
     def get_hover_color(self,event) -> None:
         '''
-        獲取當前滑鼠所指的顏色
+        獲取當前滑鼠所指的顏色並顯示座標
         '''
-        if self.imageview.image:
-            # 将 Canvas 坐标转换为图像坐标
-            canvas_x, canvas_y = self.imageview.canvasx(event.x), self.imageview.canvasy(event.y)
-            img_x = int((canvas_x - self.imageview.offset_x) / self.imageview.image_scale_factor)
-            img_y = int((canvas_y - self.imageview.offset_y) / self.imageview.image_scale_factor)
+        if not self.imageview.image: return
 
-            # 确保坐标在图像范围内
-            if 0 <= img_x < self.imageview.image.width and 0 <= img_y < self.imageview.image.height:
-                color = self.imageview.image.getpixel((img_x, img_y))  # 获取像素颜色
+        #將畫布座標轉為圖像座標
+        canvas_x, canvas_y = self.imageview.canvasx(event.x), self.imageview.canvasy(event.y)
+        img_x = int((canvas_x - self.imageview.offset_x) / self.imageview.image_scale_factor)
+        img_y = int((canvas_y - self.imageview.offset_y) / self.imageview.image_scale_factor)
 
-                province_id = get_province_from_color(self.root,color)
+        # 確保座標合法
+        is_valid_position = 0 <= img_x < self.imageview.image.width and 0 <= img_y < self.imageview.image.height
 
-                province_data = self.root.map_data["province"][self.root.map_data["province"]["id"] == province_id][0]
-                terrain = province_data["category"]
-                try:
-                    province_name = f"({self.root.loc_data[f"VICTORY_POINTS_{province_id}"]})"
-                except:
-                    province_name = ""
+        if not is_valid_position: return
+            
+        #獲取當前所指顏色
+        color = self.imageview.image.getpixel((img_x, img_y))
 
-                self.imageview.itemconfig("_text",text=f"{self.root.loc_data[terrain]}省分ID:{province_id} {province_name}")
+        #以顏色獲取省分資料
+        province_data = Province.get_province_from_color(self.root,color)
+
+        terrain = province_data.terrain
+        state = State.get_state_from_province(self.root,province_data)
+
+        try:
+            province_name = f"({self.root.loc_data[f"VICTORY_POINTS_{province_data.id}"]})"
+        except:
+            province_name = ""
+        
+        try:
+            state_name = self.root.loc_data[f"STATE_{state.id}"] + f"(#{state.id})的"
+        
+        except:
+            state_name = ""
+
+        self.imageview.itemconfig("_text",text=f"{state_name}{self.root.loc_data[terrain]}省分(#{province_data.id} {province_name})")
+        self.imageview.itemconfig("_coord",text=f"座標:({img_x},{img_y})")
                 
 
         

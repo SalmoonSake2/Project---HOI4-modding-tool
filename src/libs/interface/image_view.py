@@ -6,22 +6,22 @@ from PIL import Image, ImageTk
 import ttkbootstrap as ttk
 
 class Imageview(ttk.Canvas):
-
+    '''
+    圖片檢視器元件
+    '''
     def __init__(self, 
                  image:Image.Image | None = None,
                  scale_restrction: tuple = (0.1, 10), 
                  always_bg:bool = True,
+                 operation_key:tuple[str] = ("<MouseWheel>","<ButtonPress-1>","<B1-Motion>"),
                  **kwargs):
         '''
-        Construct a imageview widget with the parent master.
+        圖片檢視元件，繼承自ttkbootstrap.Canvas。
 
-        Valid resource names: background, bd, bg, borderwidth, closeenough,
-        confine, cursor, height, highlightbackground, highlightcolor,
-        highlightthickness, image, insertbackground, insertborderwidth,
-        insertofftime, insertontime, insertwidth, offset, relief, scale_restrction,
-        scrollregion, selectbackground, selectborderwidth, selectforeground,
-        state, takefocus, width, xscrollcommand, xscrollincrement,
-        yscrollcommand, yscrollincrement.
+        :param image: 欲顯示的圖片
+        :param scale_restrction: 最小與最大縮放限制
+        :param always_bg: 圖片是否總是在最下層
+        :param operation_key: 操作的按鍵(縮放,開始拖曳,拖曳)
         '''
 
         super().__init__(**kwargs)
@@ -36,18 +36,20 @@ class Imageview(ttk.Canvas):
 
         self.always_bg = always_bg
 
-        self.create_image(0, 0, image=self.image_tk, anchor=ttk.NW,tag="_image")
+        self.create_image(0, 0, image=self.image_tk, anchor=ttk.NW,tag="_image_28a391cf82739")#單純沒有意義的hash，避免衝突
 
         if self.always_bg:
-            self.tag_lower("_image")
+            self.tag_lower("_image_28a391cf82739")
 
         # 配置互動(滾輪縮放、拖曳)
-        self.bind("<MouseWheel>", self._zoom)
-        self.bind("<ButtonPress-1>", self._start_pan)
-        self.bind("<B1-Motion>", self._pan)
+        self.bind(operation_key[0], self._zoom)
+        self.bind(operation_key[1], self._start_pan)
+        self.bind(operation_key[2], self._pan)
 
     def _zoom(self, event):
-
+        '''
+        內部方法，用於處理縮放時的操作
+        '''
         last_scale_factor = self.image_scale_factor
 
         #如果當前倍率正常則放大
@@ -68,14 +70,18 @@ class Imageview(ttk.Canvas):
             self._render_task()
 
     def _start_pan(self, event):
-        #獲取使用者開始拖曳的"元件"座標
+        '''
+        內部方法，用於開始拖曳時的操作。獲取使用者開始拖曳的座標以平滑地拖曳。
+        '''
         self.drag_mark_x, self.drag_mark_y = event.x, event.y
 
     def _pan(self, event):
-
+        '''
+        內部方法，用於處理拖曳時的操作
+        '''
         if self.image is None: return 
 
-        #獲取鼠標偏移數據並更新當前偏移值(注意:鼠標向(+)移動時圖片讀取框會向(-)移動)
+        #獲取當前座標與開始時的偏移
         delta_x = event.x - self.drag_mark_x
         delta_y = event.y - self.drag_mark_y
         
@@ -87,7 +93,9 @@ class Imageview(ttk.Canvas):
         self._render_task()
 
     def _render_task(self) -> None:
-
+        '''
+        內部方法，重新渲染畫面。
+        '''
         w, h = self.image.size
         canvas_width, canvas_height = (self.winfo_width(), self.winfo_height())
 
@@ -98,33 +106,35 @@ class Imageview(ttk.Canvas):
         view_y1 = min(h, int((canvas_height - self.offset_y) / self.image_scale_factor))
 
         #座標正常才刷新
-        if view_x1 > view_x0 and view_y1 > view_y0:
-
-            # 只保留圖片可見區域
-            cropped_img = self.image.crop((view_x0, view_y0, view_x1, view_y1))
-            cropped_w = view_x1 - view_x0
-            cropped_h = view_y1 - view_y0
-
-            # 縮放
-            if int(cropped_w * self.image_scale_factor) > 0 and int(cropped_h * self.image_scale_factor) > 0:
-                scaled_cropped_img = cropped_img.resize(
-                    size=(int(cropped_w * self.image_scale_factor), int(cropped_h * self.image_scale_factor)),
-                    resample=Image.Resampling.NEAREST,
-                )
+        if not (view_x1 > view_x0 and view_y1 > view_y0): return
             
-            else:
-                scaled_cropped_img = cropped_img
+        #只保留圖片可見區域並裁切
+        cropped_img = self.image.crop((view_x0, view_y0, view_x1, view_y1))
 
-            # 更新顯示圖像
-            self.image_tk = ImageTk.PhotoImage(scaled_cropped_img)
-            self.delete("_image")
-            self.create_image(
-                self.offset_x + view_x0 * self.image_scale_factor,
-                self.offset_y + view_y0 * self.image_scale_factor,
-                image=self.image_tk,
-                anchor=ttk.NW,
-                tag="_image"
+        #裁切後的圖片大小
+        cropped_w = view_x1 - view_x0
+        cropped_h = view_y1 - view_y0
+
+        #縮放裁切影像至視窗大小
+        if int(cropped_w * self.image_scale_factor) > 0 and int(cropped_h * self.image_scale_factor) > 0:
+            scaled_cropped_img = cropped_img.resize(
+                size=(int(cropped_w * self.image_scale_factor), int(cropped_h * self.image_scale_factor)),
+                resample=Image.Resampling.NEAREST,
             )
+        
+        else:
+            scaled_cropped_img = cropped_img
 
-            if self.always_bg:
-                self.tag_lower("_image")
+        # 更新顯示圖像
+        self.image_tk = ImageTk.PhotoImage(scaled_cropped_img)
+        self.delete("_image_28a391cf82739")
+        self.create_image(
+            self.offset_x + view_x0 * self.image_scale_factor,
+            self.offset_y + view_y0 * self.image_scale_factor,
+            image=self.image_tk,
+            anchor=ttk.NW,
+            tag="_image_28a391cf82739"
+        )
+
+        if self.always_bg:
+            self.tag_lower("_image_28a391cf82739")
