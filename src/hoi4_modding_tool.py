@@ -87,29 +87,19 @@ class App:
                 callback_function_list.append(callback)
                 progress_msgs.append(msg)
 
-            #本地化文檔
-            def set_loc_data(x): self.root.loc_data = x
-            append_mission(read_loc_files,(self.root,),set_loc_data,"建立本地化文檔")
+            append_mission(read_loc_files,(self.root,),None,"讀取localisation")
+            append_mission(read_map_files,(self.root,),None,"讀取map與history/states")
+            append_mission(read_country_tag_file,(self.root,),None,"讀取common/country_tags")
+            append_mission(read_country_color,(self.root,),None,"讀取common/countries")
+            append_mission(create_province_map_image,(self.root,),None,"繪製省分地圖")
+            append_mission(create_state_map_image,(self.root,),None,"繪製地塊地圖")
+            append_mission(create_strategic_map_image,(self.root,),None,"繪製戰略區地圖")
+            append_mission(create_nation_map_image,(self.root,),None,"繪製政權地圖")
 
-            #地圖
-            def set_map_data(x): self.root.map_data = x
-            append_mission(read_map_files,(self.root,),set_map_data,"讀取地圖")
-
-            def set_state_map(x): self.root.state_map = x
-            append_mission(create_state_map_image,(self.root,),set_state_map,"繪製地塊地圖")
-
-            #國家文化、顏色 @優先
-            def set_country_tag(x): self.root.country_tag = x
-            append_mission(read_country_tag_file,(self.root,),set_country_tag,"讀取國家代碼")
-
-            def set_country_color(x): self.root.country_color = x
-            append_mission(read_country_color,(self.root,),set_country_color,"讀取國家配色")
-
-            def set_nation_map(x): self.root.nation_map = x
-            append_mission(create_nation_map_image,(self.root,),set_nation_map,"繪製政權地圖")
-
-            #按鈕設定
             def update_btn(running_window): 
+                '''
+                確保在任務完成後才更新畫面
+                '''
                 self.character_btn.config(state="normal")
                 self.map_view_btn.config(state="normal")
                 self.sel_dir_btn.config(state="disabled")

@@ -25,8 +25,14 @@ class Imageview(ttk.Canvas):
         '''
 
         super().__init__(**kwargs)
+        
         self.image = image
-        self.image_tk = ImageTk.PhotoImage(self.image)
+
+        if self.image is not None:
+            self.image_tk = ImageTk.PhotoImage(self.image)
+        
+        else:
+            self.image_tk = None
 
         self.image_scale_factor = 1.0
         self.min_scale, self.max_scale = scale_restrction
@@ -139,6 +145,12 @@ class Imageview(ttk.Canvas):
         if self.always_bg:
             self.tag_lower("_image_28a391cf82739")
     
+    def force_render(self) -> None:
+        '''
+        強制刷新畫面
+        '''
+        self._render_task()
+
     def set_image(self,image) -> None:
         '''
         設定圖片

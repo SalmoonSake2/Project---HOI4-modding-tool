@@ -29,7 +29,7 @@ class RunningWindow:
         - 遇到需要raise錯誤的地方則設定`running_window.exception`用於錯誤字串顯示。\n
         - 上述行為之後直接return就好，不用設定其他。\n
         - 需要在`running_window.is_cancel_task`為True時返回。\n
-        - 定期向`running_window.progress_var`改變進度值，否則將不會有進度顯示。\n
+        - 定期以`running_window.update_progress()`改變進度值，否則將不會有進度顯示。\n
 
         :param execute_list: 一個可執行項目或待執行清單，如果是清單，那麼將由第一個開始執行，直到完成輸出才會再執行下一個。\n
                              每個函數都需要在當中加入`running_window`參數。
@@ -54,7 +54,7 @@ class RunningWindow:
         self.is_cancel_task = False     #使用者選擇取消任務
         self.is_done = False            #全部任務是否完成
 
-        self.show_and_create_widget()
+        self._show_and_create_widget()
 
         self.progress_msg = "準備中"
         self.progress_var = 0
@@ -63,7 +63,6 @@ class RunningWindow:
         def total_functions() -> None:
             for function, args, callback_function, progress_msg in zip(self.execute_list, self.args_list, self.callback_function_list, self.progress_msgs):
                 self.progress_msg = progress_msg
-                self.progress_var = 0
 
                 if not isinstance(args,tuple):
                     raise Exception("Please check your args' type is tuple")
@@ -95,9 +94,9 @@ class RunningWindow:
             raise Exception("Invalid types of argument 'execute_list'. ")
 
         thread.start()
-        self.update_task()
+        self._update_task()
     
-    def show_and_create_widget(self) -> None:
+    def _show_and_create_widget(self) -> None:
         '''
         顯示視窗並創建物件(主線程)
         '''
@@ -125,7 +124,13 @@ class RunningWindow:
                                      command=cancel_task)
         self.cancel_btn.pack(side="left",padx=10)
     
-    def update_task(self) -> None:
+    def update_progress(self,x:int) -> None:
+        '''
+        更新進度數值
+        '''
+        self.progress_var = x
+
+    def _update_task(self) -> None:
         '''
         更新畫面(主線程)
         '''
@@ -157,4 +162,4 @@ class RunningWindow:
             self.toplevel.destroy()
             return 
         
-        self.toplevel.after(ms=50,func=self.update_task)
+        self.toplevel.after(ms=50,func=self._update_task)

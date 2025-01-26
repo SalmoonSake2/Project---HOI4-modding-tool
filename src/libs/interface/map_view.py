@@ -2,7 +2,8 @@
 map_view.py
 '''
 
-from PIL import Image
+from typing import Literal
+
 import ttkbootstrap as ttk
 
 from libs.interface.image_view import Imageview
@@ -16,8 +17,8 @@ class Mapview:
 
     def __init__(self,root:Root) -> None:
         self.root = root
-        self.mode = "province"
         self.show_and_create_widget()
+        self.imageview.after(200,self.set_view_mode("province"))
     
     def show_and_create_widget(self) -> None:
         
@@ -33,7 +34,8 @@ class Mapview:
                                    width=700,
                                    scale_restrction=(0.21,20),
                                    operation_key=("<MouseWheel>","<ButtonPress-2>","<B2-Motion>"),
-                                   image=Image.open(self.root.hoi4path+"/map/provinces.bmp"))
+                                   image=self.root.game_image.province_map)
+        
         self.imageview.pack()
 
         self.imageview.create_rectangle(0,0,700,40,fill="#555555")
@@ -41,17 +43,13 @@ class Mapview:
         self.imageview.create_text(560,10,text="座標:",fill="#CCCCCC",font="Helvetica 12",anchor="nw",tags="_coord")
 
         self.imageview.bind("<Motion>", self.get_hover_color)
+        self.imageview.bind("<ButtonPress-1>",self.show_map_item)
 
         view_mode_frame = ttk.Frame(master=map_frame)
         view_mode_frame.pack(fill="x")
 
         view_mode = ("province","state","strategic","nation","river","heightmap","terrain")
-
-        loc = ("省分","地塊","戰略區","政權","河流","高度圖","地形")
-        view_mode_loc = dict(zip(view_mode,loc))
-
-        btn_command = (self.province_mode,self.state_mode,None,self.nation_mode,self.river_mode,self.heightmap_mode,self.terrain_mode)
-        view_mode_btn_command = dict(zip(view_mode,btn_command))
+        view_mode_loc = dict(zip(view_mode,("省分","地塊","戰略區","政權","河流","高度圖","地形")))
 
         view_mode_button = dict()
 
@@ -59,12 +57,15 @@ class Mapview:
             button = ttk.Button(master=view_mode_frame,
                                 text=view_mode_loc[mode],
                                 style="outline",
-                                command=view_mode_btn_command[mode])
+                                command=lambda x=mode:self.set_view_mode(x))
             view_mode_button[mode] = button
             view_mode_button[mode].pack(side="left")
-
-        #檢視strategic region
-        #繪製鐵路、補給基地
+    
+    def show_map_item(self,event) -> None:
+        '''
+        顯示選中物件的資訊
+        '''
+        ...
     
     def get_hover_color(self,event) -> None:
         '''
@@ -85,7 +86,7 @@ class Mapview:
         if self.mode == "province":
 
             #獲取當前所指顏色
-            color = self.imageview.image.getpixel((img_x, img_y))
+            color = self.root.game_image.province_image.getpixel((img_x, img_y))
 
             #以顏色獲取省分資料
             province_data = Province.get_province_from_color(self.root,color)
@@ -186,7 +187,7 @@ class Mapview:
 
         elif self.mode == "nation":
             #獲取當前所指顏色
-            color = self.root.state_map.getpixel((img_x, img_y))
+            color = self.root.game_image.state_map.getpixel((img_x, img_y))
 
             #以顏色獲取國家TAG
             try:
@@ -196,28 +197,32 @@ class Mapview:
             except:
                 self.imageview.itemconfig("_text",text="")
 
+        elif self.mode == "strategic":
+            #獲取當前所指顏色
+            color = self.root.game_image.state_map.getpixel((img_x, img_y))
+
+            try:
+                strategic_id = self.root.province_strategic_mapping[Province.get_province_from_color(self.root,color).id]
+
+                self.imageview.itemconfig("_text",text=f"{self.root.loc_data[self.root.map_data["strategicregion"][strategic_id][0]["name"].strip('"')]}(#{strategic_id})")
+            except:
+                self.imageview.itemconfig("_text",text="")
+
         self.imageview.itemconfig("_coord",text=f"座標:({img_x},{img_y})")
-                
-    def river_mode(self) -> None:
-        self.mode = "river"
-        self.imageview.set_image(Image.open(self.root.hoi4path+"/map/rivers.bmp"))
-    
-    def province_mode(self) -> None:
-        self.mode = "province"
-        self.imageview.set_image(Image.open(self.root.hoi4path+"/map/provinces.bmp"))
-    
-    def heightmap_mode(self) -> None:
-        self.mode = "heightmap"
-        self.imageview.set_image(Image.open(self.root.hoi4path+"/map/heightmap.bmp"))
-    
-    def terrain_mode(self) -> None:
-        self.mode = "terrain"
-        self.imageview.set_image(Image.open(self.root.hoi4path+"/map/terrain.bmp"))
 
-    def state_mode(self) -> None:
-        self.mode = "state"
-        self.imageview.set_image(self.root.state_map)
+    def set_view_mode(self,mode_name:Literal["province","state","strategic","nation","river","heightmap","terrain"]) -> None:
+        '''
+        設定視圖模式
+        '''
+        self.mode = mode_name
 
-    def nation_mode(self) -> None:
-        self.mode = "nation"
-        self.imageview.set_image(self.root.nation_map)
+        match self.mode:
+            case "province":    using_image = self.root.game_image.province_map
+            case "state":       using_image = self.root.game_image.state_map
+            case "strategic":   using_image = self.root.game_image.strategic_map
+            case "nation":      using_image = self.root.game_image.nation_map
+            case "river":       using_image = self.root.game_image.rivers_image
+            case "heightmap":   using_image = self.root.game_image.rivers_image
+            case "terrain":     using_image = self.root.game_image.terrain_image
+            
+        self.imageview.set_image(using_image)
