@@ -13,9 +13,9 @@ from libs.interface.running_window import RunningWindow
 from libs.map import Province, State
 from libs.pdxscript import read as pdxread
 from libs.pdxscript import PDXstatement
-from libs.root import Root
+from libs.root import root
 
-def read_loc_files(root:Root,running_window:RunningWindow) -> None:
+def read_loc_files(running_window:RunningWindow) -> None:
     '''
     讀取本地化文件
 
@@ -65,7 +65,6 @@ def read_loc_files(root:Root,running_window:RunningWindow) -> None:
     
     #輸出檔案
     root.loc_data = running_window.localization_data
-    return
 
 def read_loc_file(running_window:RunningWindow,loc_file:str) -> None:
     '''
@@ -120,7 +119,7 @@ def read_railway_file(file_path:str) -> tuple[dict[str,int|list]]:
                            "province":railway_provinces})
     return tuple(result)
 
-def read_map_files(root:Root,running_window:RunningWindow) -> None:
+def read_map_files(running_window:RunningWindow) -> None:
     '''
     讀取地圖檔案，相關技術細節可以參閱\n
     https://hoi4.paradoxwikis.com/Map_modding#Provinces
@@ -277,7 +276,7 @@ def read_map_files(root:Root,running_window:RunningWindow) -> None:
                       "state-province": state_province_mapping,
                       "strategicregion":strategicregion_data}
 
-def read_country_tag_file(root:Root,running_window:RunningWindow) -> None:
+def read_country_tag_file(running_window:RunningWindow) -> None:
     '''
     讀取國家代碼
     '''
@@ -294,9 +293,8 @@ def read_country_tag_file(root:Root,running_window:RunningWindow) -> None:
             if running_window.is_cancel_task: return
     
     root.country_tag =  country_tags
-    return
 
-def read_country_color(root:Root, running_window:RunningWindow) -> None:
+def read_country_color(running_window:RunningWindow) -> None:
     """
     讀取國家顏色
     """
@@ -345,9 +343,8 @@ def read_country_color(root:Root, running_window:RunningWindow) -> None:
 
     # 合併結果
     root.country_color = {**result_rgb, **result_hsv}
-    return
 
-def create_province_map_image(root:Root,running_window:RunningWindow) -> None:
+def create_province_map_image(running_window:RunningWindow) -> None:
     '''
     建立省分視圖
     '''
@@ -380,7 +377,7 @@ def create_province_map_image(root:Root,running_window:RunningWindow) -> None:
 
     running_window.update_progress(100)
         
-def create_state_map_image(root:Root,running_window:RunningWindow) -> None:
+def create_state_map_image(running_window:RunningWindow) -> None:
     '''
     建立地塊視圖
     '''
@@ -402,7 +399,7 @@ def create_state_map_image(root:Root,running_window:RunningWindow) -> None:
         b = province_data["b"]
         avalible_color.add((r,g,b))
 
-    color_to_state = {color : State.get_state_from_province(root,Province.get_province_from_color(root,color)) for color in avalible_color}
+    color_to_state = {color : State.from_province(Province.from_color(color)) for color in avalible_color}
 
     #對每個像素逐一檢查並修改
     for x in range(w):
@@ -431,7 +428,7 @@ def create_state_map_image(root:Root,running_window:RunningWindow) -> None:
     
     root.game_image.state_map =  province_image
 
-def create_strategic_map_image(root:Root, running_window:RunningWindow) -> None:
+def create_strategic_map_image(running_window:RunningWindow) -> None:
     '''
     建立戰略區視圖
     '''
@@ -465,7 +462,7 @@ def create_strategic_map_image(root:Root, running_window:RunningWindow) -> None:
     color_to_strategic = dict()
     for color in avalible_color:
         try:
-            color_to_strategic[color] = province_strategic_mapping[Province.get_province_from_color(root,color).id]
+            color_to_strategic[color] = province_strategic_mapping[Province.from_color(color).id]
         except:
             ...
 
@@ -496,7 +493,7 @@ def create_strategic_map_image(root:Root, running_window:RunningWindow) -> None:
     
     root.game_image.strategic_map = province_image
 
-def create_nation_map_image(root:Root,running_window:RunningWindow) -> None:
+def create_nation_map_image(running_window:RunningWindow) -> None:
     '''
     建立無條件時的政權地圖(有條件ex:比屬剛果)
     '''

@@ -24,14 +24,14 @@ from PIL import Image, ImageTk
 import ttkbootstrap as ttk
 from ttkbootstrap.dialogs import Messagebox as msg
 
-from libs.root import Root
+from libs.root import root
 
 class Character_creater:
     '''
     角色創建器
     '''
-    def __init__(self, root:Root) -> None:
-        self.root = root
+    def __init__(self, prev:ttk.Window | ttk.Toplevel) -> None:
+        self.prev = prev
         self.show_and_create_widget()
 
     def show_and_create_widget(self) -> None:
@@ -41,7 +41,7 @@ class Character_creater:
 
         toplevel = ttk.Toplevel(title="角色創建器",
                             size=(570,750),
-                            transient=self.root,
+                            transient=self.prev,
                             resizable=(False,False))
             
         def create_upper_frame() -> None:
@@ -64,12 +64,12 @@ class Character_creater:
                 if file_path:
                     photo = ImageTk.PhotoImage(Image.open(file_path).resize((155,212)))
                 else:
-                    photo = ImageTk.PhotoImage(Image.open(self.root.hoi4path+"/gfx/leaders/leader_marshal_unknown.dds"))
+                    photo = ImageTk.PhotoImage(Image.open(root.hoi4path+"/gfx/leaders/leader_marshal_unknown.dds"))
 
                 photo_frame.itemconfig(photo_image_id,image= photo)
                 photo_frame.photo_image = photo
 
-            photo_frame.photo_image = ImageTk.PhotoImage(Image.open(self.root.hoi4path+"/gfx/leaders/leader_marshal_unknown.dds"))
+            photo_frame.photo_image = ImageTk.PhotoImage(Image.open(root.hoi4path+"/gfx/leaders/leader_marshal_unknown.dds"))
             photo_image_id = photo_frame.create_image(0,0,image=photo_frame.photo_image,anchor="nw")
             photo_frame.tag_bind(photo_image_id,"<Button-1>",photo_button_command)
 
@@ -80,12 +80,12 @@ class Character_creater:
                 if file_path:
                     photo = ImageTk.PhotoImage(Image.open(file_path).resize((63,66)))
                 else:
-                    photo = ImageTk.PhotoImage(Image.open(self.root.hoi4path+"/gfx/interface/officer_corp/select_advisor.dds"))
+                    photo = ImageTk.PhotoImage(Image.open(root.hoi4path+"/gfx/interface/officer_corp/select_advisor.dds"))
 
                 photo_frame.itemconfig(advisor_image_id,image= photo)
                 photo_frame.advisor_image = photo
 
-            photo_frame.advisor_image = ImageTk.PhotoImage(Image.open(self.root.hoi4path+"/gfx/interface/officer_corp/select_advisor.dds"))
+            photo_frame.advisor_image = ImageTk.PhotoImage(Image.open(root.hoi4path+"/gfx/interface/officer_corp/select_advisor.dds"))
             advisor_image_id = photo_frame.create_image(92,146,image=photo_frame.advisor_image,anchor="nw")
             photo_frame.tag_bind(advisor_image_id,"<Button-1>",advisor_button_command)
 

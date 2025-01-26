@@ -44,5 +44,9 @@ class Root(ttk.Window):
         self.country_color:dict[tuple[int]]  #國家TAG對上顏色
         self.strategic_color:dict[tuple[int]] #戰略區對上顏色
 
-        #是否更新介面
-        self.has_updated: bool = True
+        self.has_updated: bool = True           #是否完成資料更新I/O
+        self.first_try_hoi4_path:bool = True    #是否為首次嘗試預設路徑
+
+root:Root = Root(title="鋼鐵雄心四模組工具",
+                 themename="darkly",
+                 size=(400,300))

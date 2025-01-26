@@ -6,41 +6,41 @@ from typing import Literal
 
 import ttkbootstrap as ttk
 
+from libs.enums import *
 from libs.interface.image_view import Imageview
 from libs.map import Province, State
-from libs.root import Root
+from libs.root import root
 
 class Mapview:
     '''
     地圖檢視器視窗
     '''
 
-    def __init__(self,root:Root) -> None:
-        self.root = root
+    def __init__(self,prev:ttk.Toplevel | ttk.Window) -> None:
+        self.prev = prev
         self.show_and_create_widget()
-        self.imageview.after(200,self.set_view_mode("province"))
+        self.mode = "province"
     
     def show_and_create_widget(self) -> None:
         
         toplevel = ttk.Toplevel(title="地圖檢視器",
-                            size=(1050,600),
-                            transient=self.root)
+                            size=(1300,900),
+                            transient=self.prev)
         
         map_frame = ttk.Frame(master=toplevel)
         map_frame.pack(side="left",fill="y")
 
         self.imageview = Imageview(master=map_frame,
-                                   height=570,
-                                   width=700,
+                                   height=40,
+                                   width=900,
                                    scale_restrction=(0.21,20),
                                    operation_key=("<MouseWheel>","<ButtonPress-2>","<B2-Motion>"),
-                                   image=self.root.game_image.province_map)
-        
-        self.imageview.pack()
+                                   image=root.game_image.province_map)
+        self.imageview.pack(fill="y",expand=True)
 
-        self.imageview.create_rectangle(0,0,700,40,fill="#555555")
+        self.imageview.create_rectangle(0,0,900,40,fill="#555555")
         self.imageview.create_text(10,10,text="省分ID:",fill="#CCCCCC",font="Helvetica 12",anchor="nw",tags="_text")
-        self.imageview.create_text(560,10,text="座標:",fill="#CCCCCC",font="Helvetica 12",anchor="nw",tags="_coord")
+        self.imageview.create_text(760,10,text="座標:",fill="#CCCCCC",font="Helvetica 12",anchor="nw",tags="_coord")
 
         self.imageview.bind("<Motion>", self.get_hover_color)
         self.imageview.bind("<ButtonPress-1>",self.show_map_item)
@@ -51,7 +51,7 @@ class Mapview:
         view_mode = ("province","state","strategic","nation","river","heightmap","terrain")
         view_mode_loc = dict(zip(view_mode,("省分","地塊","戰略區","政權","河流","高度圖","地形")))
 
-        view_mode_button = dict()
+        view_mode_button:dict[str,ttk.Button] = dict()
 
         for mode in view_mode:
             button = ttk.Button(master=view_mode_frame,
@@ -59,152 +59,96 @@ class Mapview:
                                 style="outline",
                                 command=lambda x=mode:self.set_view_mode(x))
             view_mode_button[mode] = button
-            view_mode_button[mode].pack(side="left")
+            view_mode_button[mode].pack(side="left",pady=5)
+        
+        info_frame = ttk.Labelframe(master=toplevel,width=350,text="詳細資訊")
+        info_frame.pack(side="left",fill="both",expand=True,padx=5,pady=5)
     
     def show_map_item(self,event) -> None:
         '''
         顯示選中物件的資訊
         '''
         ...
-    
+
     def get_hover_color(self,event) -> None:
         '''
         獲取當前滑鼠所指的顏色並顯示座標及資訊
         '''
-        if not self.imageview.image: return
+        img_x, img_y = self.imageview.get_image_postion(event.x,event.y)
 
-        #將畫布座標轉為圖像座標
-        canvas_x, canvas_y = self.imageview.canvasx(event.x), self.imageview.canvasy(event.y)
-        img_x = int((canvas_x - self.imageview.offset_x) / self.imageview.image_scale_factor)
-        img_y = int((canvas_y - self.imageview.offset_y) / self.imageview.image_scale_factor)
-
-        # 確保座標合法
-        is_valid_position = 0 <= img_x < self.imageview.image.width and 0 <= img_y < self.imageview.image.height
-
-        if not is_valid_position: return
+        color = self.imageview.image.convert("RGB").getpixel((img_x, img_y))
         
         if self.mode == "province":
 
-            #獲取當前所指顏色
-            color = self.root.game_image.province_image.getpixel((img_x, img_y))
+            #使用province.bmp分析，而非當前圖像
+            color = root.game_image.province_image.getpixel((img_x, img_y))
 
-            #以顏色獲取省分資料
-            province_data = Province.get_province_from_color(self.root,color)
+            province_data = Province.from_color(color)
 
             terrain = province_data.terrain
-            state = State.get_state_from_province(self.root,province_data)
+            state = State.from_province(province_data)
 
             try:
-                province_name = f"({self.root.loc_data[f"VICTORY_POINTS_{province_data.id}"]})"
+                province_name = f"({root.loc_data[f"VICTORY_POINTS_{province_data.id}"]})"
             except:
                 province_name = ""
             
             try:
-                state_name = self.root.loc_data[f"STATE_{state.id}"] + f"(#{state.id})的"
+                state_name = root.loc_data[f"STATE_{state.id}"] + f"(#{state.id})的"
             
             except:
                 state_name = ""
 
-            self.imageview.itemconfig("_text",text=f"{state_name}{self.root.loc_data[terrain]}省分(#{province_data.id} {province_name})")
+            self.imageview.itemconfig("_text",text=f"{state_name}{root.loc_data[terrain]}省分(#{province_data.id} {province_name})")
 
         elif self.mode == "heightmap":
+            #灰階圖像
             color = self.imageview.image.getpixel((img_x, img_y))
-            self.imageview.itemconfig("_text",text=f"高度:{color-95}")
+            self.imageview.itemconfig("_text",text=f"高度:{color}")
         
         elif self.mode == "state":
-            #獲取當前所指顏色
-            color = self.imageview.image.getpixel((img_x, img_y))
-
             #以顏色獲取資料
-            province_data = Province.get_province_from_color(self.root,color)
+            province_data = Province.from_color(color)
 
-            state = State.get_state_from_province(self.root,province_data)
+            state = State.from_province(province_data)
 
             if state is None:
                 self.imageview.itemconfig("_text",text="海洋")
 
             else:
-                self.imageview.itemconfig("_text",text=f"{self.root.loc_data["STATE_"+str(state.id)]}(#{state.id})")
+                self.imageview.itemconfig("_text",text=f"{root.loc_data["STATE_"+str(state.id)]}(#{state.id})")
 
         elif self.mode == "river":
-            #獲取當前所指顏色
-            color = self.imageview.image.convert("RGB").getpixel((img_x, img_y))
-
-            river_color_mapping = {
-                (0,255,0):"源頭",
-                (255,0,0):"流入",
-                (255,252,0):"分流",
-                (0,255,255):"窄河流(超窄材質)",
-                (0,200,255):"窄河流",
-                (0,150,255):"窄河流",
-                (0,100,255):"窄河流(寬材質)",
-                (0,0,255):"寬河流",
-                (0,0,225):"寬河流",
-                (0,0,200):"寬河流",
-                (0,0,150):"寬河流",
-                (0,0,100):"寬河流(超寬材質)"
-            }
-
             try:
-                self.imageview.itemconfig("_text",text=river_color_mapping[color])
+                self.imageview.itemconfig("_text",text=RIVERCOLOR[color])
             
             except:
                 self.imageview.itemconfig("_text",text="")
 
         elif self.mode == "terrain":
-            #獲取當前所指顏色
-            color = self.imageview.image.convert("RGB").getpixel((img_x, img_y))
-
-            color_mapping = {
-                (86,124,27):"平原",
-                (0,86,6):"茂密的森林",
-                (112,74,31):"丘陵",
-                (206,169,99):"礫質沙漠",
-                (6,200,11):"稀疏的森林",
-                (255,0,24):"農田",
-                (134,84,30):"山峰",
-                (252,255,0):"砂質沙漠",
-                (73,59,15):"岩質沙漠",
-                (75,147,174):"沼澤地",
-                (174,0,255):"熱帶山",
-                (92,83,76):"溫帶山",
-                (255,0,240):"沙漠邊緣",
-                (240,255,0):"城市",
-                (8,31,130):"海洋",
-                (255,255,255):"被雪覆蓋的山",
-                (132,255,0):"丘陵",
-                (114,137,105):"被雪覆蓋的平原",
-                (58,131,82):"山",
-                (255,0,127):"叢林",
-                (243,199,147):"山"
-            }
-
             try:
-                self.imageview.itemconfig("_text",text=color_mapping[color])
+                self.imageview.itemconfig("_text",text=TERRAINCOLOR[color])
             
             except:
                 self.imageview.itemconfig("_text",text="")
 
         elif self.mode == "nation":
-            #獲取當前所指顏色
-            color = self.root.game_image.state_map.getpixel((img_x, img_y))
+            #以state視圖分析
+            color = root.game_image.state_map.getpixel((img_x, img_y))
 
             #以顏色獲取國家TAG
             try:
-                country_tag = self.root.state_country_color_mapping[color]
+                country_tag = root.state_country_color_mapping[color]
 
-                self.imageview.itemconfig("_text",text=f"{self.root.loc_data[country_tag+"_ADJ"]}({country_tag})")
+                self.imageview.itemconfig("_text",text=f"{root.loc_data[country_tag+"_ADJ"]}({country_tag})")
             except:
                 self.imageview.itemconfig("_text",text="")
 
         elif self.mode == "strategic":
-            #獲取當前所指顏色
-            color = self.root.game_image.state_map.getpixel((img_x, img_y))
-
             try:
-                strategic_id = self.root.province_strategic_mapping[Province.get_province_from_color(self.root,color).id]
+                strategic_id = root.province_strategic_mapping[Province.from_color(color).id]
 
-                self.imageview.itemconfig("_text",text=f"{self.root.loc_data[self.root.map_data["strategicregion"][strategic_id][0]["name"].strip('"')]}(#{strategic_id})")
+                self.imageview.itemconfig("_text",text=f"{root.loc_data[root.map_data["strategicregion"][strategic_id][0]["name"].strip('"')]}(#{strategic_id})")
             except:
                 self.imageview.itemconfig("_text",text="")
 
@@ -217,12 +161,12 @@ class Mapview:
         self.mode = mode_name
 
         match self.mode:
-            case "province":    using_image = self.root.game_image.province_map
-            case "state":       using_image = self.root.game_image.state_map
-            case "strategic":   using_image = self.root.game_image.strategic_map
-            case "nation":      using_image = self.root.game_image.nation_map
-            case "river":       using_image = self.root.game_image.rivers_image
-            case "heightmap":   using_image = self.root.game_image.rivers_image
-            case "terrain":     using_image = self.root.game_image.terrain_image
+            case "province":    using_image = root.game_image.province_map
+            case "state":       using_image = root.game_image.state_map
+            case "strategic":   using_image = root.game_image.strategic_map
+            case "nation":      using_image = root.game_image.nation_map
+            case "river":       using_image = root.game_image.rivers_image
+            case "heightmap":   using_image = root.game_image.rivers_image
+            case "terrain":     using_image = root.game_image.terrain_image
             
         self.imageview.set_image(using_image)

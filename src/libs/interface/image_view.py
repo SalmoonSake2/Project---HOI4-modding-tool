@@ -157,3 +157,21 @@ class Imageview(ttk.Canvas):
         '''
         self.image = image
         self._render_task()
+    
+    def get_image_postion(self,x:int,y:int) -> tuple[int,int] | None:
+        '''
+        由畫面座標取得圖像座標
+        '''
+        if not self.image: return
+
+        #將畫面座標轉為畫布座標，再轉成圖像座標
+        canvas_x, canvas_y = self.canvasx(x), self.canvasy(y)
+        img_x = int((canvas_x - self.offset_x) / self.image_scale_factor)
+        img_y = int((canvas_y - self.offset_y) / self.image_scale_factor)
+
+        # 確保座標合法
+        is_valid_position = 0 <= img_x < self.image.width and 0 <= img_y < self.image.height
+
+        if not is_valid_position: return
+
+        return img_x,img_y
