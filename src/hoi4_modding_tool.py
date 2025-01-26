@@ -8,6 +8,7 @@ from tkinter import filedialog
 
 from pathlib import Path
 import ttkbootstrap as ttk
+from ttkbootstrap.dialogs import Messagebox as msg
 
 from libs.interface.character_creater import Character_creater
 from libs.interface.map_view import Mapview
@@ -23,9 +24,8 @@ class App:
         root.mainloop()
     
     def find_hoi4_path(self) -> None:
-        if Path("C:/Program Files (x86)/Steam/steamapps/common/Hearts of Iron IV").exists():
-            root.hoi4path = "C:/Program Files (x86)/Steam/steamapps/common/Hearts of Iron IV"
-            root.has_updated = False
+        common_game_path = "C:/Program Files (x86)/Steam/steamapps/common/Hearts of Iron IV"
+        root.hoi4path = common_game_path if Path(common_game_path).exists() else None
 
     def show_and_create_widget(self) -> None:
         
@@ -49,10 +49,9 @@ class App:
             resp = filedialog.askdirectory()
             if resp: 
                 root.hoi4path = resp
-                root.has_updated = False
 
         self.sel_dir_btn = ttk.Button(master=root,
-                                 text="選擇鋼四資料夾",
+                                 text="遊戲資料夾",
                                  command=sel_dir_btn_command)
         self.sel_dir_btn.pack(pady=20)
 
@@ -61,9 +60,43 @@ class App:
             if resp: root.modpath = resp
 
         sel_mod_dir_btn = ttk.Button(master=root,
-                                     text="選擇模組資料夾",
+                                     text="模組資料夾",
                                      command=sel_mod_dir_btn_command)
         sel_mod_dir_btn.pack(pady=20)
+
+        def included_mod_dir_btn_command():
+            resp = filedialog.askdirectory()
+            if resp: root.included_modpaths.append(resp)
+            name_list = list()
+            
+            for path in root.included_modpaths:
+                try:
+                    name = get_mod_name(path)
+                    name_list.append(name)
+                except:
+                    root.included_modpaths.pop()
+                    msg.show_error(message=f"路徑{path}無法辨識為模組")
+            info_strvar.set(f"當前引用模組:{name_list}")
+
+        sel_mod_dir_btn = ttk.Button(master=root,
+                                     text="引用模組",
+                                     command=included_mod_dir_btn_command)
+        sel_mod_dir_btn.pack(pady=20)
+
+        def read_command():
+            self.read_btn.config(state="disabled")
+            root.has_updated = False
+
+        self.read_btn = ttk.Button(master=root,
+                                     text="開始讀取",
+                                     style="danger",
+                                     command=read_command)
+        self.read_btn.pack(pady=20)
+
+        info_strvar = ttk.StringVar(value="當前引用模組:")
+        info_label = ttk.Label(master=root,
+                               textvariable=info_strvar)
+        info_label.pack(pady=20)
     
     def update_task(self) -> None:
         #檢查是否設定鋼四資料夾
@@ -80,10 +113,12 @@ class App:
                 callback_function_list.append(callback)
                 progress_msgs.append(msg)
 
-            append_mission(read_loc_files,(),None,"讀取localisation")
-            append_mission(read_map_files,(),None,"讀取map與history/states")
-            append_mission(read_country_tag_file,(),None,"讀取common/country_tags")
-            append_mission(read_country_color,(),None,"讀取common/countries")
+            append_mission(check_path_avalibility,(),None,"確認路徑有效性")
+            append_mission(integrate_path,(),None,"整合路徑")
+            append_mission(read_loc_files,(),None,"讀取本地化文件")
+            append_mission(read_map_files,(),None,"讀取地圖")
+            append_mission(read_country_tag_file,(),None,"讀取國家代碼")
+            append_mission(read_country_color,(),None,"讀取國家配色")
             append_mission(create_province_map_image,(),None,"繪製省分地圖")
             append_mission(create_state_map_image,(),None,"繪製地塊地圖")
             append_mission(create_strategic_map_image,(),None,"繪製戰略區地圖")
@@ -95,16 +130,22 @@ class App:
                 '''
                 self.character_btn.config(state="normal")
                 self.map_view_btn.config(state="normal")
+                self.read_btn.config(state="normal")
                 self.sel_dir_btn.config(state="disabled")
             append_mission(update_btn,(),None,"更新畫面")
 
-            RunningWindow(execute_list=execute_list,
+            self.rw = RunningWindow(execute_list=execute_list,
                           args_list=args_list,
                           callback_function_list=callback_function_list,
                           prev=root,
                           title="執行中",
                           progress_msgs=progress_msgs)
             root.has_updated = True
+        
+        try:
+            if self.rw.is_done: self.read_btn.config(state="normal")
+        except Exception:
+            pass
             
         root.after(ms=100,func=self.update_task)
     

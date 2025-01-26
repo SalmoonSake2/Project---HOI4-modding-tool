@@ -45,3 +45,21 @@ TERRAINCOLOR = {
     (243,199,147):"山",
     (27,27,27):"山"
 }
+
+LANGUAGE = (
+    "english",
+    "simp_chinese",
+    "spanish",
+    "french",
+    "german",
+    "russian",
+    "braz_por",
+    "polish",
+    "japanese",
+)
+
+RED = "\033[31m"
+GREEN = "\033[32m"
+YELLOW = "\033[33m"
+BLUE = "\033[34m"
+RESET = "\033[0m"

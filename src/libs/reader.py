@@ -9,59 +9,90 @@ import numpy as np
 from pathlib import Path
 from PIL import Image
 
+from libs.enums import *
 from libs.interface.running_window import RunningWindow
 from libs.map import Province, State
 from libs.pdxscript import read as pdxread
 from libs.pdxscript import PDXstatement
 from libs.root import root
 
+def get_mod_name(path:str) -> str:
+    '''
+    獲取模組名稱
+
+    :param path: 模組資料夾所在路徑
+    '''
+
+    try:
+        mod_name = PDXstatement("mod",pdxread(path+"/descriptor.mod"))["name"].strip('"')
+        mod_version =  PDXstatement("mod",pdxread(path+"/descriptor.mod"))["version"].strip('"')
+    except:
+        raise Exception("模組讀取失敗")
+    
+    return mod_name+"("+mod_version+")"
+    
+def integrate_path(running_window:RunningWindow) -> None:
+    '''
+    整合本體遊戲、模組的路徑
+    '''
+    avalible_path = [root.hoi4path]
+    avalible_path.extend(root.included_modpaths)
+    if root.modpath is not None:
+        avalible_path.extend([root.modpath])
+    root.avalible_path = avalible_path
+
+def check_path_avalibility(running_window:RunningWindow) -> None:
+    '''
+    確認路徑有效性
+    '''
+
+    #檢驗路徑是否存在
+    if root.hoi4path is None:
+        running_window.exception = "The game path is not given!"
+        return
+    
+    #確認遊戲路徑是否正常
+    if not Path(root.hoi4path).joinpath("hoi4.exe").exists():
+        running_window.exception = "Invalid path selection for Heart of Iron IV"
+        return
+    
+    #確認模組路徑是否正常
+    if root.modpath is not None:
+        if not Path(root.modpath).joinpath("descriptor.mod").exists():
+            running_window.exception = f"Invalid path selection for mod included: {path}"
+            return
+
+    for path in root.included_modpaths:
+        if not Path(path).joinpath("descriptor.mod").exists():
+            running_window.exception = f"Invalid path selection for mod included: {path}"
+            return
+    
 def read_loc_files(running_window:RunningWindow) -> None:
     '''
     讀取本地化文件
-
-    :param prev: 引用的框架
-    :param root: 根視窗
-    :param result_queue: 結果回傳佇列
-    :param progress_queue: 進度回傳佇列
     '''
-    #檢驗路徑是否存在
-    if root.hoi4path is None:
-        running_window.exception = "The path is not given in instance self.root!"
-        return
 
-    #估計檔案數(用於進度回傳)
-    loc_file_path = Path(root.hoi4path).joinpath(f"localisation/{root.user_lang}")
+    #儲存輸出結果的字典
+    running_window.localization_data = dict() 
 
-    #檢驗路徑是否存在
-    if not loc_file_path.exists() or not loc_file_path.is_dir():
-        running_window.exception= "Invalid path for Heart of Iron IV or mod"
-        return
+    #讀取包括模組的每一個本地化文件路徑
+    for loc_dir in root.avalible_path:
 
-    loc_file_count = sum(1 for file in loc_file_path.rglob("*yml") if file.is_file())
+        loc_file_path = Path(loc_dir).joinpath("localisation")
 
-    running_window.localization_data = dict() #儲存輸出結果的字典
-
-    try:
-        loc_files = list(loc_file_path.rglob("*yml"))
+        #找出該路徑下的所有本地化文件
+        loc_files_en = list(loc_file_path.rglob(f"*l_english.yml"))
+        loc_files = list(loc_file_path.rglob(f"*l_{root.user_lang}.yml"))
+        loc_files_en.extend(loc_files)
     
-    except PermissionError as e:
-        running_window.exception = e
-        return
-
-    #檢查是否正確取得本地化文本
-    if not loc_files:
-        running_window.exception = f"Cannot find any localisation files at {loc_file_path}. Please check your directary."
-        return 
-
-    #依序處理每個yml檔並更新進度
-    for index,loc_file in enumerate(loc_files):
-        read_loc_file(running_window,loc_file)
+        #依序處理每個yml檔
+        for loc_file in loc_files_en:
+            read_loc_file(running_window,loc_file)
+            if running_window.is_cancel_task:
+                break
+        
         if running_window.is_cancel_task:
-            break
-        running_window.update_progress(int(((index+1)/loc_file_count)*100))
-    
-    if running_window.is_cancel_task:
-        return
+            return
     
     #輸出檔案
     root.loc_data = running_window.localization_data
@@ -73,7 +104,7 @@ def read_loc_file(running_window:RunningWindow,loc_file:str) -> None:
     :param running_window: 引用的框架
     :param loc_file: 本地化文檔的路徑
     '''
-    pattern = r'(\w+):\s*"([^"]+)"'#形如 keyword : "value"的特徵。
+    pattern = r'(\w+):\s*\d*?\s*"([^"]+)"'#形如 keyword : "value"的特徵。
     try:
         with open(file=loc_file,mode="r",encoding="utf-8-sig") as file:
             for line in file:
@@ -129,164 +160,171 @@ def read_map_files(running_window:RunningWindow) -> None:
 
     running_window.update_progress(0)
 
-    map_file_path = Path(root.hoi4path).joinpath("map")
-    state_file_path = Path(root.hoi4path).joinpath("history/states")
-
-    try:
-        root.game_image.province_image = Image.open(root.hoi4path + "/map/provinces.bmp")
-    except Exception as e:
-        running_window.exception = f"讀取province.bmp時出現錯誤:{e}"
-
-    try:
-        root.game_image.terrain_image = Image.open(root.hoi4path+"/map/terrain.bmp")
-    except Exception as e:
-        running_window.exception = f"讀取terrain.bmp時出現錯誤:{e}"
+    for path in root.avalible_path:
+        try: root.game_image.province_image = Image.open(path + "/map/provinces.bmp")
+        except FileNotFoundError: pass
+        except Exception as e:
+            running_window.exception = f"Something went wrong when handling file:{path},{e}"
     
-    try:
-        root.game_image.heightmap_image = Image.open(root.hoi4path+"/map/heightmap.bmp")
-    except Exception as e:
-        running_window.exception = f"讀取heightmap.bmp時出現錯誤:{e}"
+    for path in root.avalible_path:
+        try: root.game_image.terrain_image = Image.open(path +"/map/terrain.bmp")
+        except FileNotFoundError: pass
+        except Exception as e:
+            running_window.exception = f"Something went wrong when handling file:{path},{e}"
     
-    try:
-        root.game_image.rivers_image = Image.open(root.hoi4path+"/map/rivers.bmp")
-    except Exception as e:
-        running_window.exception = f"讀取rivers.bmp時出現錯誤:{e}"
+    for path in root.avalible_path:
+        try: root.game_image.heightmap_image = Image.open(path +"/map/heightmap.bmp")
+        except FileNotFoundError: pass
+        except Exception as e:
+            running_window.exception = f"Something went wrong when handling file:{path},{e}"
 
-    try:
-        province_definitions_csv_column_names = ("id","r","g","b","type","coastal","category","continent")
-        province_definitions = np.genfromtxt(map_file_path.joinpath("definition.csv"),
+    for path in root.avalible_path:
+        try: root.game_image.rivers_image = Image.open(path +"/map/rivers.bmp")
+        except FileNotFoundError: pass
+        except Exception as e:
+            running_window.exception = f"Something went wrong when handling file:{path},{e}"
+
+    province_definitions_csv_column_names = ("id","r","g","b","type","coastal","category","continent")
+
+    for path in root.avalible_path:
+        try:
+            province_definitions = np.genfromtxt(Path(path).joinpath("map").joinpath("definition.csv"),
+                                                 delimiter=";",
+                                                 dtype=None,
+                                                 encoding="utf-8",
+                                                 names=province_definitions_csv_column_names)
+        except FileNotFoundError: pass
+        except Exception as e:
+            running_window.exception = f"Something went wrong when handling file:{path},{e}"
+    
+    for path in root.avalible_path:
+        try:
+            adjacencies_data = np.genfromtxt(Path(path).joinpath("map").joinpath("adjacencies.csv"),
+                                             delimiter=";",
+                                             dtype=None,
+                                             encoding="utf-8",
+                                             invalid_raise=False,
+                                             names=True)
+        except FileNotFoundError: pass
+        except Exception as e:
+            running_window.exception = f"Something went wrong when handling file:{path},{e}"
+    
+    for path in root.avalible_path:
+        try: adjacency_rules_data = pdxread(Path(path).joinpath("map").joinpath("adjacency_rules.txt"))
+        except FileNotFoundError: pass
+        except Exception as e:
+            running_window.exception = f"Something went wrong when handling file:{path},{e}"
+
+    for path in root.avalible_path:
+        try: continent_data = pdxread(Path(path).joinpath("map").joinpath("continent.txt"))
+        except FileNotFoundError: pass
+        except Exception as e:
+            running_window.exception = f"Something went wrong when handling file:{path},{e}"
+
+    for path in root.avalible_path:
+        try: seasons_data = pdxread(Path(path).joinpath("map").joinpath("seasons.txt"))
+        except FileNotFoundError: pass
+        except Exception as e:
+            running_window.exception = f"Something went wrong when handling file:{path},{e}"
+
+    for path in root.avalible_path:
+        try: supply_nodes_data = read_supply_node_file(Path(path).joinpath("map").joinpath("supply_nodes.txt"))
+        except FileNotFoundError: pass
+        except Exception as e:
+            running_window.exception = f"Something went wrong when handling file:{path},{e}"
+
+    for path in root.avalible_path:
+        try: railway_data = read_railway_file(Path(path).joinpath("map").joinpath("railways.txt"))
+        except FileNotFoundError: pass
+        except Exception as e:
+            running_window.exception = f"Something went wrong when handling file:{path},{e}"
+    
+    for path in root.avalible_path:
+        try:
+            unitstack_column_names = ("id","type","x","y","z","rotation","offset")
+            unitstacks_data = np.genfromtxt(Path(path).joinpath("map").joinpath("unitstacks.txt"),
                                             delimiter=";",
                                             dtype=None,
                                             encoding="utf-8",
-                                            names=province_definitions_csv_column_names)
-    except Exception as e:
-        running_window.exception = f"讀取definition.csv時出現錯誤:{e}"
-        return
-    
-    try:
-        adjacencies_data = np.genfromtxt(map_file_path.joinpath("adjacencies.csv"),
-                                        delimiter=";",
-                                        dtype=None,
-                                        encoding="utf-8",
-                                        invalid_raise=False,
-                                        names=True)
-    except Exception as e:
-        running_window.exception = f"讀取adjacencies.csv出現錯誤:{e}"
-        return
-    
-    try:
-        adjacency_rules_data = pdxread(map_file_path.joinpath("adjacency_rules.txt"))
-    except Exception as e:
-        running_window.exception = f"讀取adjacency_rules.txt出現錯誤:{e}"
-        return
-    
-    try:
-        continent_data = pdxread(map_file_path.joinpath("continent.txt"))
-    except Exception as e:
-        running_window.exception = f"讀取continent.txt出現錯誤:{e}"
-        return
-    
-    try:
-        seasons_data = pdxread(map_file_path.joinpath("seasons.txt"))
-    except Exception as e:
-        running_window.exception = f"讀取seasons.txt出現錯誤:{e}"
-        return
-    
-    try:
-        supply_nodes_data = read_supply_node_file(map_file_path.joinpath("supply_nodes.txt"))
-    except Exception as e:
-        running_window.exception = f"讀取supply_nodes.txt出現錯誤:{e}"
-        return
-    
-    try:
-        railway_data = read_railway_file(map_file_path.joinpath("railways.txt"))
-    except Exception as e:
-        running_window.exception = f"讀取railways.txt出現錯誤:{e}"
-        return
-
-    try:
-        unitstack_column_names = ("id","type","x","y","z","rotation","offset")
-        unitstacks_data = np.genfromtxt(map_file_path.joinpath("unitstacks.txt"),
-                                        delimiter=";",
-                                        dtype=None,
-                                        encoding="utf-8",
-                                        invalid_raise=False,
-                                        names=unitstack_column_names)
-    except Exception as e:
-        running_window.exception = f"讀取unitstacks.txt出現錯誤:{e}"
-        return
+                                            invalid_raise=False,
+                                            names=unitstack_column_names)
+        except FileNotFoundError: pass
+        except Exception as e:
+            running_window.exception = f"Something went wrong when handling file:{path},{e}"
     
     running_window.update_progress(30)
 
-    strategicregions_file_path = map_file_path.joinpath("strategicregions")
+    ###############################################################################################################################################
 
-    strategicregions_file_count = sum(1 for file in strategicregions_file_path.rglob("*txt") if file.is_file())
+    for path in root.avalible_path:
+        try:
+            state_data = dict()
+            state_province_mapping = dict()
+            state_files = list(Path(path).joinpath("history/states").rglob("*txt"))
 
-    try:
-        state_data = dict()
-        state_province_mapping = dict()
-        state_files = list(state_file_path.rglob("*txt"))
+            file_reading = None
+            for file in state_files:
 
-        file_reading = None
-        for counter, file in enumerate(state_files):
+                file_reading = file
+                data = pdxread(file)
 
-            file_reading = file
-            data = pdxread(file)
+                state_id = int(data[0]["id"])
 
-            state_id = int(data[0]["id"])
+                #列出其擁有的所有省分
+                provinces = data[0]["provinces"]
+                state_province_mapping[state_id] = provinces
+                
+                state_data[state_id] = data
+        
+        except Exception as e:
+            running_window.exception = f"讀取{file_reading}出現錯誤:{e}"
+            return
 
-            #列出其擁有的所有省分
-            provinces = data[0]["provinces"]
-            state_province_mapping[state_id] = provinces
-            
-            state_data[state_id] = data
+    for path in root.avalible_path:
+        strategicregions_file_path = Path(path).joinpath("map/strategicregions")
+        try:
+            strategicregion_data = dict()
+            strategicregion_files = list(strategicregions_file_path.rglob("*txt"))
 
-            running_window.update_progress(30+int((counter+1)/strategicregions_file_count)*40)
-    
-    except Exception as e:
-        running_window.exception = f"讀取{file_reading}出現錯誤:{e}"
-        return
+            for file in strategicregion_files:
 
-    try:
-        strategicregion_data = dict()
-        strategicregion_files = list(strategicregions_file_path.rglob("*txt"))
+                file_reading = file
+                data = pdxread(file)
+                strategicregion_id = int(data[0]["id"])
+                strategicregion_data[strategicregion_id] = data
 
-        for counter, file in enumerate(strategicregion_files):
-
-            file_reading = file
-            data = pdxread(file)
-            strategicregion_id = int(data[0]["id"])
-            strategicregion_data[strategicregion_id] = data
-
-            running_window.update_progress(70+int((counter+1)/strategicregions_file_count)*30)
-
-    except Exception as e:
-        running_window.exception = f"讀取{file_reading}出現錯誤:{e}"
-        return
-    
-    root.map_data  = {"province":province_definitions,
-                      "adjacency":adjacencies_data,
-                      "adjacency_rule":adjacency_rules_data,
-                      "continent":continent_data,
-                      "season":seasons_data,
-                      "supply_node":supply_nodes_data,
-                      "railway":railway_data,
-                      "state": state_data,
-                      "unitstack": unitstacks_data,
-                      "state-province": state_province_mapping,
-                      "strategicregion":strategicregion_data}
+        except Exception as e:
+            running_window.exception = f"讀取{file_reading}出現錯誤:{e}"
+            return
+        
+        root.map_data  = {"province":province_definitions,
+                        "adjacency":adjacencies_data,
+                        "adjacency_rule":adjacency_rules_data,
+                        "continent":continent_data,
+                        "season":seasons_data,
+                        "supply_node":supply_nodes_data,
+                        "railway":railway_data,
+                        "state": state_data,
+                        "unitstack": unitstacks_data,
+                        "state-province": state_province_mapping,
+                        "strategicregion":strategicregion_data}
 
 def read_country_tag_file(running_window:RunningWindow) -> None:
     '''
     讀取國家代碼
     '''
     running_window.update_progress(0)
-    country_tag_file_path = Path(root.hoi4path + "/common/country_tags")
 
-    country_tag_files = list(country_tag_file_path.rglob("*txt"))
+    #找出實際使用的檔案
+    using_country_tag_files:dict[str,str] = dict()
+    for dir in root.avalible_path:
+        country_tag_file_path = Path(dir + "/common/country_tags")
+        country_tag_files = set(country_tag_file_path.rglob("*txt"))
+        for file in country_tag_files:
+            using_country_tag_files[file.stem] = file
 
     country_tags = dict()
-    for country_tag_file in country_tag_files:
+    for file_name, country_tag_file in using_country_tag_files.items():
         country_tag_pdxscript = pdxread(country_tag_file)
         for statement in country_tag_pdxscript:
             country_tags[statement.keyword] = statement.value.strip('"')
@@ -299,7 +337,7 @@ def read_country_color(running_window:RunningWindow) -> None:
     讀取國家顏色
     """
     running_window.update_progress(0)
-    country_color_file_path = Path(root.hoi4path + "/common/countries/colors.txt")
+    country_color_file_path = Path(root.avalible_path[-1] + "/common/countries/colors.txt")
 
     color_data = ""
 

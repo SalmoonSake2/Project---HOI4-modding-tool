@@ -9,7 +9,7 @@ import ttkbootstrap as ttk
 from libs.enums import *
 from libs.interface.image_view import Imageview
 from libs.map import Province, State
-from libs.root import root
+from libs.root import root,loc
 
 class Mapview:
     '''
@@ -74,7 +74,13 @@ class Mapview:
         '''
         獲取當前滑鼠所指的顏色並顯示座標及資訊
         '''
-        img_x, img_y = self.imageview.get_image_postion(event.x,event.y)
+        img_position = self.imageview.get_image_postion(event.x,event.y)
+
+        if img_position is not None:
+            img_x, img_y = img_position
+        
+        else:
+            return
 
         color = self.imageview.image.convert("RGB").getpixel((img_x, img_y))
         
@@ -88,18 +94,16 @@ class Mapview:
             terrain = province_data.terrain
             state = State.from_province(province_data)
 
-            try:
-                province_name = f"({root.loc_data[f"VICTORY_POINTS_{province_data.id}"]})"
-            except:
-                province_name = ""
+            province_name = f"({loc(f"VICTORY_POINTS_{province_data.id}")})"
             
-            try:
-                state_name = root.loc_data[f"STATE_{state.id}"] + f"(#{state.id})的"
-            
-            except:
+            if "VICTORY_POINTS_" in province_name: province_name = ""
+
+            if state is not None:
+                state_name = loc(f"STATE_{state.id}") + f"(#{state.id})的"
+            else:
                 state_name = ""
 
-            self.imageview.itemconfig("_text",text=f"{state_name}{root.loc_data[terrain]}省分(#{province_data.id} {province_name})")
+            self.imageview.itemconfig("_text",text=f"{state_name}{loc(terrain)}省分(#{province_data.id} {province_name})")
 
         elif self.mode == "heightmap":
             #灰階圖像
@@ -116,7 +120,7 @@ class Mapview:
                 self.imageview.itemconfig("_text",text="海洋")
 
             else:
-                self.imageview.itemconfig("_text",text=f"{root.loc_data["STATE_"+str(state.id)]}(#{state.id})")
+                self.imageview.itemconfig("_text",text=f"{loc("STATE_"+str(state.id))}(#{state.id})")
 
         elif self.mode == "river":
             try:
@@ -140,7 +144,7 @@ class Mapview:
             try:
                 country_tag = root.state_country_color_mapping[color]
 
-                self.imageview.itemconfig("_text",text=f"{root.loc_data[country_tag+"_ADJ"]}({country_tag})")
+                self.imageview.itemconfig("_text",text=f"{loc(country_tag+"_DEF")}({country_tag})")
             except:
                 self.imageview.itemconfig("_text",text="")
 
@@ -148,7 +152,7 @@ class Mapview:
             try:
                 strategic_id = root.province_strategic_mapping[Province.from_color(color).id]
 
-                self.imageview.itemconfig("_text",text=f"{root.loc_data[root.map_data["strategicregion"][strategic_id][0]["name"].strip('"')]}(#{strategic_id})")
+                self.imageview.itemconfig("_text",text=f"{loc(root.map_data["strategicregion"][strategic_id][0]["name"].strip('"'))}(#{strategic_id})")
             except:
                 self.imageview.itemconfig("_text",text="")
 
@@ -166,7 +170,7 @@ class Mapview:
             case "strategic":   using_image = root.game_image.strategic_map
             case "nation":      using_image = root.game_image.nation_map
             case "river":       using_image = root.game_image.rivers_image
-            case "heightmap":   using_image = root.game_image.rivers_image
+            case "heightmap":   using_image = root.game_image.heightmap_image
             case "terrain":     using_image = root.game_image.terrain_image
             
         self.imageview.set_image(using_image)

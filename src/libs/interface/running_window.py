@@ -140,6 +140,7 @@ class RunningWindow:
             msg.show_info(message="已中斷執行",
                           title=self.title,
                           parent=self.prev)
+            self.is_done = True
             return
         
         #更新畫面進度值
@@ -150,11 +151,9 @@ class RunningWindow:
         
         #擷取錯誤並彈窗顯示
         if self.exception is not None:
-            if not self.prev.first_try_hoi4_path:
-                msg.show_warning(message=str(self.exception),title="錯誤!",parent=self.prev)
-            else:
-                self.prev.first_try_hoi4_path = False
+            msg.show_warning(message=str(self.exception),title="錯誤!",parent=self.prev)
             self.toplevel.destroy()
+            self.is_done = True
             return
         
         #完成任務的話就直接跳出

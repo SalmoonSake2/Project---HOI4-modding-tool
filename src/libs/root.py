@@ -26,8 +26,10 @@ class Root(ttk.Window):
     def __init__(self,*args,**kwargs) -> None:
         super().__init__(*args,**kwargs)
 
-        self.hoi4path: str | None               #Heart of Iron IV 主遊戲的路徑
-        self.modpath: str | None                #模組所在的路徑
+        self.hoi4path: str | None = None        #Heart of Iron IV 主遊戲的路徑
+        self.modpath: str | None = None         #開發模組所在的路徑
+        self.included_modpaths:list[str] = []   #引用的模組路徑
+        self.avalible_path: list[str]           #整合本體遊戲、模組的路徑
         self.user_lang: str = "simp_chinese"    #模組開發語言(主要影響讀取本地化文件時的路徑)
         self.loc_data: dict                     #本地化文件
 
@@ -45,8 +47,17 @@ class Root(ttk.Window):
         self.strategic_color:dict[tuple[int]] #戰略區對上顏色
 
         self.has_updated: bool = True           #是否完成資料更新I/O
-        self.first_try_hoi4_path:bool = True    #是否為首次嘗試預設路徑
 
 root:Root = Root(title="鋼鐵雄心四模組工具",
                  themename="darkly",
-                 size=(400,300))
+                 size=(400,500))
+
+def loc(key:str) -> str:
+    '''
+    獲取本地化字串
+    '''
+    try:
+        return root.loc_data[key]
+    
+    except KeyError:
+        return key

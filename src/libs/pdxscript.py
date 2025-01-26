@@ -57,9 +57,14 @@ def read(path:str) -> list['PDXstatement']:
     #讀取檔案寫入記憶體
     raw_file:list[str] = list()
 
-    with open(abspath(path),mode="r",encoding="utf-8-sig") as file:
-        for line in file:
-            raw_file.append(line)
+    try:
+        with open(abspath(path),mode="r",encoding="utf-8-sig") as file:
+            for line in file:
+                raw_file.append(line)
+    except UnicodeDecodeError:
+        with open(abspath(path),mode="r",encoding="latin1") as file:
+            for line in file:
+                raw_file.append(line)
     
     #token化
     tokens:list[str] = list()   #最後輸出的token
