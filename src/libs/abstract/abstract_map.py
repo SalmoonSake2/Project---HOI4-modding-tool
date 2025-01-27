@@ -1,20 +1,14 @@
 '''
-map.py
+abstract_map.py
 
-與地圖相關的事物
-
-NOTICE: 更新任何東西時請確認是否連帶更新abstract_map.py
+抽象map.py物件
 '''
 
 from typing import Literal
 
 from libs.pdxscript import PDXstatement
-from libs.root import root
 
 class Province:
-    '''
-    省分(province)相關
-    '''
     def __init__(self,
                  id:int,
                  color:tuple[int,int,int],
@@ -32,16 +26,9 @@ class Province:
         self.buildings:set[Building]    #建築
     
     @staticmethod
-    def from_color(color:tuple[int,int,int]) -> 'Province':
-        '''
-        由給予的顏色獲取省分
-        '''
-        return root.map_data.province[root.map_data.color_mapping.province_id_from_color[color]]
+    def from_color(color:tuple[int,int,int]) -> 'Province':...
 
 class Adjacency:
-    '''
-    省分連結
-    '''
     def __init__(self,
                  p1:int,
                  p2:int,
@@ -57,9 +44,6 @@ class Adjacency:
         self.rule = rule                    #連結規則
 
 class AdjacencyPassType:
-    '''
-    省分連結規則-通過類型
-    '''
     def __init__(self,army:bool,navy:bool,submarine:bool,trade:bool) -> None:
         self.army = army
         self.navy = navy
@@ -67,9 +51,6 @@ class AdjacencyPassType:
         self.trafe = trade
 
 class AdjacencyRule:
-    '''
-    省分連結規則
-    '''
     def __init__(self,
                  name:str,
                  contested:tuple[bool,bool,bool,bool],
@@ -92,17 +73,11 @@ class AdjacencyRule:
         self.offset = offset                            #圖示偏移的量
 
 class Railway:
-    '''
-    鐵路
-    '''
     def __init__(self,level:int,provinces:tuple[int]) -> None:
         self.level = level
         self.provinces = provinces
 
 class Building:
-    '''
-    建築
-    '''
     def __init__(self,
                  name:Literal["infrastructure",
                               "arms_factory",
@@ -133,9 +108,6 @@ class Building:
         self.level = level
 
 class State:
-    '''
-    地塊(state)相關
-    '''
     def __init__(self,
                  id:int,
                  manpower:int,
@@ -166,26 +138,12 @@ class State:
         self.controller = controller
     
     @staticmethod
-    def from_province_id(province_id:int) -> 'State':
-        '''
-        由省分ID獲得地塊資訊
-        '''
-        try:
-            return root.map_data.states[root.map_data.map_mapping.province_to_state[province_id]]
-        except KeyError:
-            return None
-    
+    def from_province_id(province_id:int) -> 'State':...
+
 class StrategicRegion:
-    '''
-    戰略區
-    '''
     def __init__(self,id:int,provinces:tuple[int]) -> None:
         self.id = id
         self.provinces = provinces
     
     @staticmethod
-    def from_province_id(id:int) -> 'StrategicRegion':
-        '''
-        由省分ID獲得戰略區資料
-        '''
-        return root.map_data.strategicregions[root.map_data.map_mapping.province_to_strategic[id]]
+    def from_province(id:int) -> 'StrategicRegion':...

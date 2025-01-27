@@ -2,19 +2,75 @@
 reader.py
 讀取文檔相關的操作
 '''
-import colorsys
 import re
 
-import numpy as np
 from pathlib import Path
 from PIL import Image
 
-from libs.enums import *
 from libs.interface.running_window import RunningWindow
-from libs.map import Province, State
+from libs.map import *
 from libs.pdxscript import read as pdxread
 from libs.pdxscript import PDXstatement
 from libs.root import root
+
+def check_path_avalibility(running_window:RunningWindow) -> None:
+    '''
+    確認路徑有效性
+    '''
+
+    running_window.update_progress(0)
+
+    #檢驗路徑是否存在
+    if root.path.hoi4path is None:
+        running_window.exception = "尚未設定 Heart of Iron IV 路徑，請設定路徑後重新讀取"
+        return
+    
+    running_window.update_progress(25)
+
+    #確認遊戲路徑是否正常
+    if not Path(root.path.hoi4path).joinpath("hoi4.exe").exists():
+        running_window.exception = "無效的 Heart of Iron IV 路徑，請確認路徑後重新讀取"
+        return
+    
+    running_window.update_progress(50)
+
+    #確認模組路徑是否正常
+    if root.path.modpath is not None:
+        if not Path(root.path.modpath).joinpath("descriptor.mod").exists():
+            running_window.exception = f"無效的模組路徑{path}，確認該模組已包含正確的descriptor.mod後再重試"
+            return
+        
+    running_window.update_progress(75)
+
+    #確認引用模組路徑正常
+    for path in root.path.included_modpaths:
+        if not Path(path).joinpath("descriptor.mod").exists():
+            running_window.exception = f"無效的引用模組路徑{path}，確認該模組已包含正確的descriptor.mod後再重試"
+            return
+        
+        #用戶中斷
+        if running_window.is_cancel_task: return
+    
+    running_window.update_progress(100)
+
+def integrate_path(running_window:RunningWindow) -> None:
+    '''
+    整合本體遊戲、模組的路徑，優先級高的路徑在後
+    '''
+
+    running_window.update_progress(0)
+
+    avalible_path = [root.path.hoi4path]
+    avalible_path.extend(root.path.included_modpaths)
+
+    running_window.update_progress(90)
+
+    if root.path.modpath is not None:
+        avalible_path.extend([root.path.modpath])
+
+    root.path.avalible_path = avalible_path
+
+    running_window.update_progress(100)
 
 def get_mod_name(path:str) -> str:
     '''
@@ -27,98 +83,351 @@ def get_mod_name(path:str) -> str:
         mod_name = PDXstatement("mod",pdxread(path+"/descriptor.mod"))["name"].strip('"')
         mod_version =  PDXstatement("mod",pdxread(path+"/descriptor.mod"))["version"].strip('"')
     except:
-        raise Exception("模組讀取失敗")
+        raise Exception(f"模組讀取失敗:{path}")
     
-    return mod_name+"("+mod_version+")"
-    
-def integrate_path(running_window:RunningWindow) -> None:
-    '''
-    整合本體遊戲、模組的路徑
-    '''
-    avalible_path = [root.hoi4path]
-    avalible_path.extend(root.included_modpaths)
-    if root.modpath is not None:
-        avalible_path.extend([root.modpath])
-    root.avalible_path = avalible_path
-
-def check_path_avalibility(running_window:RunningWindow) -> None:
-    '''
-    確認路徑有效性
-    '''
-
-    #檢驗路徑是否存在
-    if root.hoi4path is None:
-        running_window.exception = "The game path is not given!"
-        return
-    
-    #確認遊戲路徑是否正常
-    if not Path(root.hoi4path).joinpath("hoi4.exe").exists():
-        running_window.exception = "Invalid path selection for Heart of Iron IV"
-        return
-    
-    #確認模組路徑是否正常
-    if root.modpath is not None:
-        if not Path(root.modpath).joinpath("descriptor.mod").exists():
-            running_window.exception = f"Invalid path selection for mod included: {path}"
-            return
-
-    for path in root.included_modpaths:
-        if not Path(path).joinpath("descriptor.mod").exists():
-            running_window.exception = f"Invalid path selection for mod included: {path}"
-            return
+    return f"{mod_name}({mod_version})"
     
 def read_loc_files(running_window:RunningWindow) -> None:
     '''
     讀取本地化文件
     '''
 
-    #儲存輸出結果的字典
-    running_window.localization_data = dict() 
+    #找出本地化文件的路徑
+    loc_files = list()
 
-    #讀取包括模組的每一個本地化文件路徑
-    for loc_dir in root.avalible_path:
+    for loc_dir in root.path.avalible_path:
 
-        loc_file_path = Path(loc_dir).joinpath("localisation")
+        loc_file_dir = Path(loc_dir).joinpath("localisation")
 
-        #找出該路徑下的所有本地化文件
-        loc_files_en = list(loc_file_path.rglob(f"*l_english.yml"))
-        loc_files = list(loc_file_path.rglob(f"*l_{root.user_lang}.yml"))
-        loc_files_en.extend(loc_files)
-    
-        #依序處理每個yml檔
-        for loc_file in loc_files_en:
-            read_loc_file(running_window,loc_file)
-            if running_window.is_cancel_task:
-                break
+        #找出該路徑下的所有本地化文件(優先權: 開發模組-當前語言 > 開發模組-英文 > 引用模組1-開發語言 > 引用模組1-英文 > 引用模組2-開發語言 > ... > 遊戲本體)
+        en_loc_files = list(loc_file_dir.rglob(f"*l_english.yml"))
+        native_loc_files = list(loc_file_dir.rglob(f"*l_{root.mod_lang}.yml"))
+
+        loc_files.extend(en_loc_files)
+        loc_files.extend(native_loc_files)
+
+    #依序處理每個yml檔並加入到本地化資料中
+    for counter, loc_file in enumerate(loc_files):
+
+        read_loc_file(running_window,loc_file)
+
+        running_window.update_progress(int((counter+1)/len(loc_files)*100))
         
-        if running_window.is_cancel_task:
-            return
-    
-    #輸出檔案
-    root.loc_data = running_window.localization_data
+        if running_window.is_cancel_task:return
 
 def read_loc_file(running_window:RunningWindow,loc_file:str) -> None:
     '''
     讀取`loc_file`的本地化文檔
 
-    :param running_window: 引用的框架
     :param loc_file: 本地化文檔的路徑
     '''
-    pattern = r'(\w+):\s*\d*?\s*"([^"]+)"'#形如 keyword : "value"的特徵。
-    try:
-        with open(file=loc_file,mode="r",encoding="utf-8-sig") as file:
-            for line in file:
-                match = re.search(pattern, line.strip())
-                if match:
-                    key, value = match.groups()
-                    running_window.localization_data[key] = value
 
-                if running_window.is_cancel_task:
-                    break
-    except FileNotFoundError as e:
-        running_window.exception = e
+    #形如 keyword :0"value"的特徵。
+    loc_pattern = r'(\w+):\s*\d*?\s*"([^"]+)"'
 
-def read_supply_node_file(file_path:str) -> tuple[int]:
+    #讀取檔案並找尋翻譯字串加入到本地化資料中
+    with open(file=loc_file,mode="r",encoding="utf-8-sig") as file:
+
+        for line in file:
+
+            match = re.search(loc_pattern, line.strip())
+
+            if match:
+                key, value = match.groups()
+                root.game_loc[key] = value
+
+            if running_window.is_cancel_task: break
+
+def read_map_files(running_window:RunningWindow) -> None:
+    '''
+    讀取地圖檔案，相關技術細節可以參閱\n
+    https://hoi4.paradoxwikis.com/Map_modding#Provinces
+
+    :param root: 根視窗
+    '''
+    import numpy as np
+
+    running_window.update_progress(0)
+
+    #讀取圖像(heightmap.bmp、provinces.bmp、rivers.bmp、terrain.bmp)
+    for path in root.path.avalible_path:
+        try: root.game_image.heightmap_image = Image.open(path +"/map/heightmap.bmp")
+        except FileNotFoundError: pass
+        except Exception as e:
+            running_window.exception = f"處理以下檔案時發生錯誤:{path},{e}"
+
+    for path in root.path.avalible_path:
+        try: root.game_image.province_image = Image.open(path + "/map/provinces.bmp")
+        except FileNotFoundError: pass
+        except Exception as e:
+            running_window.exception = f"處理以下檔案時發生錯誤:{path},{e}"
+
+    for path in root.path.avalible_path:
+        try: root.game_image.rivers_image = Image.open(path +"/map/rivers.bmp")
+        except FileNotFoundError: pass
+        except Exception as e:
+            running_window.exception = f"處理以下檔案時發生錯誤:{path},{e}"
+
+    for path in root.path.avalible_path:
+        try: root.game_image.terrain_image = Image.open(path +"/map/terrain.bmp")
+        except FileNotFoundError: pass
+        except Exception as e:
+            running_window.exception = f"處理以下檔案時發生錯誤:{path},{e}"
+    
+    running_window.update_progress(5)
+
+    #處理省分定義(definition.csv)
+    province_definitions_csv_column_names = ("id","r","g","b","type","coastal","category","continent")
+
+    for path in root.path.avalible_path:
+        try:
+            province_array = np.genfromtxt(Path(path).joinpath("map").joinpath("definition.csv"),
+                                                 delimiter=";",
+                                                 dtype=None,
+                                                 encoding="utf-8",
+                                                 names=province_definitions_csv_column_names)
+            
+            root.map_data.province = dict()
+
+            for index, data in enumerate(province_array):
+                
+                #第一項是垃圾
+                if index == 0: continue
+
+                color = (data["r"],data["g"],data["b"])
+
+                root.map_data.color_mapping.avalible_color.add(color)
+
+                #將資料調整成 id: Province的字典
+                root.map_data.province[data["id"]] = Province(id=data["id"],
+                                                              color=color,
+                                                              type=data["type"],
+                                                              terrain=data["category"],
+                                                              coastal= True if data["coastal"] == "true" else False,
+                                                              continent=data["continent"])
+                
+                #建立顏色查詢表
+                root.map_data.color_mapping.province_id_from_color[color] = data["id"]
+
+                if running_window.is_cancel_task: return
+
+        except FileNotFoundError: pass
+        except Exception as e:
+            running_window.exception = f"處理以下檔案時發生錯誤:{path},{e}"
+    
+    running_window.update_progress(15)
+
+    #處理省分連結(adjacencies.csv)
+    #文件的最後一行必須是-1;-1;-1;-1;-1;-1;-1;-1;-1
+    for path in root.path.avalible_path:
+        try:
+            adjacencies_array = np.genfromtxt(Path(path).joinpath("map").joinpath("adjacencies.csv"),
+                                             delimiter=";",
+                                             dtype=None,
+                                             encoding="utf-8",
+                                             invalid_raise=False,
+                                             names=True)
+            
+            for data in adjacencies_array:
+                adjacencies = Adjacency(data["From"],
+                                          data["To"],
+                                          data["Type"],
+                                          data["Through"],
+                                          (data["start_x"],data["start_y"]),
+                                          (data["stop_x"],data["stop_y"]),
+                                          data["adjacency_rule_name"])
+                
+                root.map_data.adjacencies.add(adjacencies)
+
+                if running_window.is_cancel_task: return
+
+        except FileNotFoundError: pass
+        except Exception as e:
+            running_window.exception = f"處理以下檔案時發生錯誤:{path},{e}"
+    
+    running_window.update_progress(20)
+
+    #處理省分連結規則(adjacency_rules.txt)
+    for path in root.path.avalible_path:
+
+        try: 
+            adjacency_rules_data = pdxread(Path(path).joinpath("map").joinpath("adjacency_rules.txt"))
+
+            #逐一讀取每一條規則
+
+            relationships = ("contested","enemy","friend","neutral")
+
+            for statement in adjacency_rules_data:
+                name = statement["name"].strip('"')
+                required_provinces = statement["required_provinces"]
+                is_disabled = statement["is_disabled"]
+                icon = statement["icon"]
+                offset = statement["offset"]
+
+                #逐一讀取不同關係下的通過規則
+                passing_rule = dict()
+
+                for relationship in relationships:
+
+                    contested_passing_rule = statement[relationship]
+
+                    army_rule = True if PDXstatement("rule",contested_passing_rule)["army"] == "yes" else False
+                    navy_rule = True if PDXstatement("rule",contested_passing_rule)["navy"] == "yes" else False
+                    submarine_rule = True if PDXstatement("rule",contested_passing_rule)["submarine"] == "yes" else False
+                    trade_rule = True if PDXstatement("rule",contested_passing_rule)["trade"] == "yes" else False
+
+                    passing_rule[relationship] = (army_rule,navy_rule,submarine_rule,trade_rule)
+                
+                #紀錄
+                root.map_data.adjacency_rules[name] = AdjacencyRule(name=name,
+                                                                    contested=passing_rule["contested"],
+                                                                    enemy=passing_rule["enemy"],
+                                                                    friend=passing_rule["friend"],
+                                                                    neutral=passing_rule["neutral"],
+                                                                    required_provinces=required_provinces,
+                                                                    is_disabled=is_disabled,
+                                                                    icon=icon,
+                                                                    offset=offset)
+                
+                if running_window.is_cancel_task: return
+
+        except FileNotFoundError: pass
+        except Exception as e:
+            running_window.exception = f"處理以下檔案時發生錯誤:{path},{e}"
+
+    running_window.update_progress(25)
+
+    #處理大陸(continent.txt)
+    for path in root.path.avalible_path:
+        try: 
+            continents = pdxread(Path(path).joinpath("map").joinpath("continent.txt"))[0].value
+
+            for index, name in enumerate(continents):
+
+                root.map_data.continents[index+1] = name
+
+                if running_window.is_cancel_task: return
+
+        except FileNotFoundError: pass
+        except Exception as e:
+            running_window.exception = f"處理以下檔案時發生錯誤:{path},{e}"
+
+    running_window.update_progress(27)
+
+    #處理補給基地(supply_nodes.txt)
+    for path in root.path.avalible_path:
+        try: root.map_data.supply_nodes = read_supply_node_file(Path(path).joinpath("map").joinpath("supply_nodes.txt"))
+        except FileNotFoundError: pass
+        except Exception as e:
+            running_window.exception = f"處理以下檔案時發生錯誤:{path},{e}"
+
+    running_window.update_progress(30)
+
+    #處理鐵路(railways.txt)
+    for path in root.path.avalible_path:
+        try: root.map_data.railways = read_railway_file(Path(path).joinpath("map").joinpath("railways.txt"))
+        except FileNotFoundError: pass
+        except Exception as e:
+            running_window.exception = f"處理以下檔案時發生錯誤:{path},{e}"
+    
+    running_window.update_progress(35)
+
+    #處理物件位置(unitstacks.txt)，事實上我只關心victory_point的位置
+    unitstack_column_names = ("id","type","x","y","z","rotation","offset")
+
+    for path in root.path.avalible_path:
+        try:
+            unitstacks_array = np.genfromtxt(Path(path).joinpath("map").joinpath("unitstacks.txt"),
+                                            delimiter=";",
+                                            dtype=None,
+                                            encoding="utf-8",
+                                            invalid_raise=False,
+                                            names=unitstack_column_names)
+            VICTORY_POINT_SYMBOL = 38
+            victory_points = unitstacks_array[unitstacks_array["type"] == VICTORY_POINT_SYMBOL]
+
+            for victory_point in victory_points:
+
+                root.map_data.province[victory_point["id"]].pos = (victory_point["x"],victory_point["z"])
+
+                if running_window.is_cancel_task: return
+
+        except FileNotFoundError: pass
+        except Exception as e:
+            running_window.exception = f"處理以下檔案時發生錯誤:{path},{e}"
+    
+    running_window.update_progress(40)
+
+    #處理地塊(state)
+    for path in root.path.avalible_path:
+        try:
+
+            #列出可以讀取的state檔案
+            state_data = dict()
+            state_files = list(Path(path).joinpath("history/states").rglob("*txt"))
+
+            #依序處理檔案
+            for file in state_files:
+
+                file_reading = file
+                data = pdxread(file)[0]
+
+                state_id = data["id"]
+                
+                #紀錄
+                state_data[state_id] = State(id=state_id,
+                                             manpower=data["manpower"],
+                                             state_category=data["state_category"],
+                                             provinces=data["provinces"],
+                                             owner=data["history"]["owner"])
+                
+                #TODO: 新增更多資料內容
+
+                #依序將省分逆回來做映射
+                for province in data["provinces"]:
+
+                    root.map_data.map_mapping.province_to_state[province] = state_id
+
+                    if running_window.is_cancel_task: return
+
+        except FileNotFoundError: pass
+        except Exception as e:
+            running_window.exception = f"讀取{file_reading}出現錯誤:{e}"
+            return
+
+    running_window.update_progress(90)
+
+    #處理戰略區
+    for path in root.path.avalible_path:
+
+        #列出所有可以使用的檔案
+        strategicregions_file_path = Path(path).joinpath("map/strategicregions")
+        strategicregion_files = list(strategicregions_file_path.rglob("*txt"))
+
+        try:
+
+            #依序讀取檔案
+            for file in strategicregion_files:
+
+                file_reading = file
+                data = pdxread(file)[0]
+                strategicregion_id = data["id"]
+                provinces = data["provinces"]
+                root.map_data.strategicregions[strategicregion_id] = StrategicRegion(strategicregion_id,provinces)
+
+                #建立省分的逆向映射
+                for province in provinces:
+                    root.map_data.map_mapping.province_to_strategic[province] = strategicregion_id
+
+                    if running_window.is_cancel_task: return
+
+        except Exception as e:
+            running_window.exception = f"讀取{file_reading}出現錯誤:{e}"
+            return
+
+    running_window.update_progress(100)
+
+def read_supply_node_file(file_path:str) -> set[int]:
     '''
     讀取補給基地所在的省份
 
@@ -131,9 +440,9 @@ def read_supply_node_file(file_path:str) -> tuple[int]:
             province = line.strip().split(" ")[1]
             result.append(province)
     
-    return tuple(result)
+    return set(result)
 
-def read_railway_file(file_path:str) -> tuple[dict[str,int|list]]:
+def read_railway_file(file_path:str) -> tuple[Railway]:
     '''
     讀取鐵軌所在的省分及等級
 
@@ -146,168 +455,8 @@ def read_railway_file(file_path:str) -> tuple[dict[str,int|list]]:
             single_railway_data = line.strip().split(" ")
             railway_level = single_railway_data[0]
             railway_provinces = tuple(single_railway_data[2:len(single_railway_data)])
-            result.append({"level":railway_level,
-                           "province":railway_provinces})
+            result.append(Railway(railway_level,railway_provinces))
     return tuple(result)
-
-def read_map_files(running_window:RunningWindow) -> None:
-    '''
-    讀取地圖檔案，相關技術細節可以參閱\n
-    https://hoi4.paradoxwikis.com/Map_modding#Provinces
-
-    :param root: 根視窗
-    '''
-
-    running_window.update_progress(0)
-
-    for path in root.avalible_path:
-        try: root.game_image.province_image = Image.open(path + "/map/provinces.bmp")
-        except FileNotFoundError: pass
-        except Exception as e:
-            running_window.exception = f"Something went wrong when handling file:{path},{e}"
-    
-    for path in root.avalible_path:
-        try: root.game_image.terrain_image = Image.open(path +"/map/terrain.bmp")
-        except FileNotFoundError: pass
-        except Exception as e:
-            running_window.exception = f"Something went wrong when handling file:{path},{e}"
-    
-    for path in root.avalible_path:
-        try: root.game_image.heightmap_image = Image.open(path +"/map/heightmap.bmp")
-        except FileNotFoundError: pass
-        except Exception as e:
-            running_window.exception = f"Something went wrong when handling file:{path},{e}"
-
-    for path in root.avalible_path:
-        try: root.game_image.rivers_image = Image.open(path +"/map/rivers.bmp")
-        except FileNotFoundError: pass
-        except Exception as e:
-            running_window.exception = f"Something went wrong when handling file:{path},{e}"
-
-    province_definitions_csv_column_names = ("id","r","g","b","type","coastal","category","continent")
-
-    for path in root.avalible_path:
-        try:
-            province_definitions = np.genfromtxt(Path(path).joinpath("map").joinpath("definition.csv"),
-                                                 delimiter=";",
-                                                 dtype=None,
-                                                 encoding="utf-8",
-                                                 names=province_definitions_csv_column_names)
-        except FileNotFoundError: pass
-        except Exception as e:
-            running_window.exception = f"Something went wrong when handling file:{path},{e}"
-    
-    for path in root.avalible_path:
-        try:
-            adjacencies_data = np.genfromtxt(Path(path).joinpath("map").joinpath("adjacencies.csv"),
-                                             delimiter=";",
-                                             dtype=None,
-                                             encoding="utf-8",
-                                             invalid_raise=False,
-                                             names=True)
-        except FileNotFoundError: pass
-        except Exception as e:
-            running_window.exception = f"Something went wrong when handling file:{path},{e}"
-    
-    for path in root.avalible_path:
-        try: adjacency_rules_data = pdxread(Path(path).joinpath("map").joinpath("adjacency_rules.txt"))
-        except FileNotFoundError: pass
-        except Exception as e:
-            running_window.exception = f"Something went wrong when handling file:{path},{e}"
-
-    for path in root.avalible_path:
-        try: continent_data = pdxread(Path(path).joinpath("map").joinpath("continent.txt"))
-        except FileNotFoundError: pass
-        except Exception as e:
-            running_window.exception = f"Something went wrong when handling file:{path},{e}"
-
-    for path in root.avalible_path:
-        try: seasons_data = pdxread(Path(path).joinpath("map").joinpath("seasons.txt"))
-        except FileNotFoundError: pass
-        except Exception as e:
-            running_window.exception = f"Something went wrong when handling file:{path},{e}"
-
-    for path in root.avalible_path:
-        try: supply_nodes_data = read_supply_node_file(Path(path).joinpath("map").joinpath("supply_nodes.txt"))
-        except FileNotFoundError: pass
-        except Exception as e:
-            running_window.exception = f"Something went wrong when handling file:{path},{e}"
-
-    for path in root.avalible_path:
-        try: railway_data = read_railway_file(Path(path).joinpath("map").joinpath("railways.txt"))
-        except FileNotFoundError: pass
-        except Exception as e:
-            running_window.exception = f"Something went wrong when handling file:{path},{e}"
-    
-    for path in root.avalible_path:
-        try:
-            unitstack_column_names = ("id","type","x","y","z","rotation","offset")
-            unitstacks_data = np.genfromtxt(Path(path).joinpath("map").joinpath("unitstacks.txt"),
-                                            delimiter=";",
-                                            dtype=None,
-                                            encoding="utf-8",
-                                            invalid_raise=False,
-                                            names=unitstack_column_names)
-        except FileNotFoundError: pass
-        except Exception as e:
-            running_window.exception = f"Something went wrong when handling file:{path},{e}"
-    
-    running_window.update_progress(30)
-
-    ###############################################################################################################################################
-
-    for path in root.avalible_path:
-        try:
-            state_data = dict()
-            state_province_mapping = dict()
-            state_files = list(Path(path).joinpath("history/states").rglob("*txt"))
-
-            file_reading = None
-            for file in state_files:
-
-                file_reading = file
-                data = pdxread(file)
-
-                state_id = int(data[0]["id"])
-
-                #列出其擁有的所有省分
-                provinces = data[0]["provinces"]
-                state_province_mapping[state_id] = provinces
-                
-                state_data[state_id] = data
-        
-        except Exception as e:
-            running_window.exception = f"讀取{file_reading}出現錯誤:{e}"
-            return
-
-    for path in root.avalible_path:
-        strategicregions_file_path = Path(path).joinpath("map/strategicregions")
-        try:
-            strategicregion_data = dict()
-            strategicregion_files = list(strategicregions_file_path.rglob("*txt"))
-
-            for file in strategicregion_files:
-
-                file_reading = file
-                data = pdxread(file)
-                strategicregion_id = int(data[0]["id"])
-                strategicregion_data[strategicregion_id] = data
-
-        except Exception as e:
-            running_window.exception = f"讀取{file_reading}出現錯誤:{e}"
-            return
-        
-        root.map_data  = {"province":province_definitions,
-                        "adjacency":adjacencies_data,
-                        "adjacency_rule":adjacency_rules_data,
-                        "continent":continent_data,
-                        "season":seasons_data,
-                        "supply_node":supply_nodes_data,
-                        "railway":railway_data,
-                        "state": state_data,
-                        "unitstack": unitstacks_data,
-                        "state-province": state_province_mapping,
-                        "strategicregion":strategicregion_data}
 
 def read_country_tag_file(running_window:RunningWindow) -> None:
     '''
@@ -316,41 +465,54 @@ def read_country_tag_file(running_window:RunningWindow) -> None:
     running_window.update_progress(0)
 
     #找出實際使用的檔案
+
     using_country_tag_files:dict[str,str] = dict()
-    for dir in root.avalible_path:
+
+    for dir in root.path.avalible_path:
+
         country_tag_file_path = Path(dir + "/common/country_tags")
         country_tag_files = set(country_tag_file_path.rglob("*txt"))
+
         for file in country_tag_files:
+
             using_country_tag_files[file.stem] = file
 
-    country_tags = dict()
-    for file_name, country_tag_file in using_country_tag_files.items():
+    for index, country_tag_file in enumerate(using_country_tag_files.values()):
+
         country_tag_pdxscript = pdxread(country_tag_file)
+
         for statement in country_tag_pdxscript:
-            country_tags[statement.keyword] = statement.value.strip('"')
+
+            root.path.country_tag[statement.keyword] = statement.value.strip('"')
+
             if running_window.is_cancel_task: return
-    
-    root.country_tag =  country_tags
+        
+        running_window.update_progress(int((index+1)/len(using_country_tag_files)*100))
 
 def read_country_color(running_window:RunningWindow) -> None:
     """
     讀取國家顏色
     """
+
+    import colorsys
+
     running_window.update_progress(0)
-    country_color_file_path = Path(root.avalible_path[-1] + "/common/countries/colors.txt")
+    country_color_file_path = Path(root.path.avalible_path[-1] + "/common/countries/colors.txt")
 
     color_data = ""
 
-    # 讀取文件，忽略註解行
+    # 將文件轉為一個字串，忽略註解行
     with open(country_color_file_path, "r", encoding="utf-8") as file:
+
         for line in file:
-            if running_window.is_cancel_task:
-                return
+
+            if running_window.is_cancel_task: return
+                
             # 移除註解
             line = re.sub(r"#.*", "", line).strip()
-            if line:  # 忽略空行
-                color_data += line + "\n"
 
+            if line: color_data += line + "\n"
+                
     # 匹配 RGB 和 HSV 顏色數據
     pattern_rgb = re.compile(
         r"(\w+)\s*=\s*\{\s*color\s*=\s*rgb\s*\{\s*(\d+)\s+(\d+)\s+(\d+)\s*\}", re.DOTALL
@@ -360,18 +522,8 @@ def read_country_color(running_window:RunningWindow) -> None:
     )
 
     # 提取數據
-    result_rgb = {
-        match[1]: (int(match[2]), int(match[3]), int(match[4]))
-        for match in pattern_rgb.finditer(color_data)
-    }
-    result_hsv = {
-        match[1]: (
-            float(match[2]),
-            float(match[3]),
-            float(match[4]),
-        )
-        for match in pattern_hsv.finditer(color_data)
-    }
+    result_rgb = {match[1]: (int(match[2]), int(match[3]), int(match[4])) for match in pattern_rgb.finditer(color_data)}
+    result_hsv = {match[1]: (float(match[2]),float(match[3]),float(match[4])) for match in pattern_hsv.finditer(color_data)}
 
     # HSV 轉換為 RGB
     for country_tag in result_hsv:
@@ -380,7 +532,9 @@ def read_country_color(running_window:RunningWindow) -> None:
         result_hsv[country_tag] = (int(r * 255), int(g * 255), int(b * 255))
 
     # 合併結果
-    root.country_color = {**result_rgb, **result_hsv}
+    root.map_data.color_mapping.country_color = result_rgb | result_hsv
+
+    running_window.update_progress(100)
 
 def create_province_map_image(running_window:RunningWindow) -> None:
     '''
@@ -425,19 +579,11 @@ def create_state_map_image(running_window:RunningWindow) -> None:
 
     pixels = province_image.load()
 
-    state_definition = dict() #dict[list]，代表特定state id 之下的province顏色指派
-    recorded_state = set()
+    state_definition = dict()   #dict[list]，代表特定state id 之下的province顏色指派
+    recorded_state = set()      #用於在後續檢查時確認是否已經有存在的地塊顏色
 
     #預先建立查詢表以加快速度
-    avalible_color = set()
-
-    for province_data in root.map_data["province"]:
-        r = province_data["r"]
-        g = province_data["g"]
-        b = province_data["b"]
-        avalible_color.add((r,g,b))
-
-    color_to_state = {color : State.from_province(Province.from_color(color)) for color in avalible_color}
+    color_to_state = {color : State.from_province_id(Province.from_color(color).id) for color in root.map_data.color_mapping.avalible_color}
 
     #對每個像素逐一檢查並修改
     for x in range(w):
@@ -462,8 +608,6 @@ def create_state_map_image(running_window:RunningWindow) -> None:
 
         running_window.update_progress(int((x/w)*100))
     
-    root.state_color = state_definition
-    
     root.game_image.state_map =  province_image
 
 def create_strategic_map_image(running_window:RunningWindow) -> None:
@@ -478,31 +622,17 @@ def create_strategic_map_image(running_window:RunningWindow) -> None:
 
     strategic_definition = dict() #dict[list]，代表特定strategic id 之下的province顏色指派
     recorded_strategic = set()
-    province_strategic_mapping = dict()
 
     #預先建立查詢表以加快速度
-    avalible_color = set()
-
-    for province_data in root.map_data["province"]:
-        r = province_data["r"]
-        g = province_data["g"]
-        b = province_data["b"]
-        avalible_color.add((r,g,b))
-    
-    #依序找出其所隸屬的省分
-    for strategicregion_id in root.map_data["strategicregion"]:
-        provinces = root.map_data["strategicregion"][strategicregion_id][0]["provinces"]
-        for province in provinces:
-            province_strategic_mapping[province] = strategicregion_id
-    
-    root.province_strategic_mapping = province_strategic_mapping
-
     color_to_strategic = dict()
-    for color in avalible_color:
+
+    for color in root.map_data.color_mapping.avalible_color:
+
         try:
-            color_to_strategic[color] = province_strategic_mapping[Province.from_color(color).id]
+            color_to_strategic[color] = StrategicRegion.from_province_id(Province.from_color(color).id)
         except:
-            ...
+            running_window.exception = f"以下省分尚未指派戰略區，請在戰略區文件中添加該省分:{Province.from_color(color).id}"
+            return
 
     #對每個像素逐一檢查並修改
     for x in range(w):
@@ -513,58 +643,45 @@ def create_strategic_map_image(running_window:RunningWindow) -> None:
 
             #獲取省分所在的戰略區
             strategic_id = color_to_strategic[pixels[x,y]]
-
-            #如果是海洋省份或未登記的省分，那就跳過該輪檢查
-            if strategic_id is None: continue
                 
             #如果是尚未紀錄的省分
             if strategic_id not in recorded_strategic:
                 strategic_definition[strategic_id] = pixels[x,y]
                 recorded_strategic.add(strategic_id)
             
-            #繪製
             pixels[x,y] = strategic_definition[strategic_id]
 
         running_window.update_progress(int((x/w)*100))
-    
-    root.strategic_color = strategic_definition
     
     root.game_image.strategic_map = province_image
 
 def create_nation_map_image(running_window:RunningWindow) -> None:
     '''
     建立無條件時的政權地圖(有條件ex:比屬剛果)
+    有條件的真的太麻煩，情況太多，不考慮處理。
     '''
     running_window.update_progress(0)
     nation_map_image = root.game_image.state_map.copy()
 
     pixels = nation_map_image.load()
 
-    #建立state顏色對國家顏色的配對
-    state_country_color_mapping = dict()
-    root.state_country_color_mapping = dict()
+    #建立查詢表
+    get_country_color = dict()
+    for color in root.map_data.color_mapping.avalible_color:
 
-    #逐一輸入state可能的顏色進行計算
-    for state_id in root.state_color:
-        state_history_data = PDXstatement("history",root.map_data["state"][state_id][0]["history"])
-        country_tag = state_history_data["owner"]
         try:
-            country_color = root.country_color[country_tag]
-        except:
-            country_color = (20,20,20)
-        state_country_color_mapping[root.state_color[state_id]] = country_color
-        root.state_country_color_mapping[root.state_color[state_id]] = country_tag
-    
+            get_country_color[color] = root.map_data.color_mapping.country_color[State.from_province_id(Province.from_color(color).id).owner]
+
+        except AttributeError:
+            get_country_color[color] = (0,0,0) #black
     
     #對每個像素進行繪製
     w,h = nation_map_image.size
 
     for x in range(w):
         for y in range(h):
-            try:
-                pixels[x,y] = state_country_color_mapping[pixels[x,y]]
-            except KeyError:
-                pixels[x,y] = (0,0,0)
+
+            pixels[x,y] = get_country_color[pixels[x,y]]
 
             if running_window.is_cancel_task: return
 

@@ -7,9 +7,10 @@ from typing import Literal
 import ttkbootstrap as ttk
 
 from libs.enums import *
+from libs.interface.localisation import loc
 from libs.interface.image_view import Imageview
 from libs.map import Province, State
-from libs.root import root,loc
+from libs.root import root
 
 class Mapview:
     '''

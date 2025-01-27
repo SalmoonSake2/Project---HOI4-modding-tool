@@ -46,6 +46,12 @@ class PDXstatement:
         #依序尋找
         for statement in self.value:
             if statement.keyword == key:
+
+                #對於value是script類型(list[PDXStatement])，提供方便進入下一層的接口
+                if len(statement.value) > 0:
+                    if isinstance(statement.value[0],PDXstatement):
+                        return PDXstatement(statement.keyword,statement.value)
+                
                 return statement.value
         return
 

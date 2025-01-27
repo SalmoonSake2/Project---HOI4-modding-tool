@@ -14,7 +14,7 @@ from libs.interface.character_creater import Character_creater
 from libs.interface.map_view import Mapview
 from libs.interface.running_window import RunningWindow
 from libs.reader import *
-from libs.root import root
+from libs.root import root  #首次被執行
 
 class App:
     def __init__(self) -> None:
@@ -25,7 +25,7 @@ class App:
     
     def find_hoi4_path(self) -> None:
         common_game_path = "C:/Program Files (x86)/Steam/steamapps/common/Hearts of Iron IV"
-        root.hoi4path = common_game_path if Path(common_game_path).exists() else None
+        root.path.hoi4path = common_game_path if Path(common_game_path).exists() else None
 
     def show_and_create_widget(self) -> None:
         
@@ -48,7 +48,7 @@ class App:
         def sel_dir_btn_command():
             resp = filedialog.askdirectory()
             if resp: 
-                root.hoi4path = resp
+                root.path.hoi4path = resp
 
         self.sel_dir_btn = ttk.Button(master=root,
                                  text="遊戲資料夾",
@@ -57,7 +57,7 @@ class App:
 
         def sel_mod_dir_btn_command():
             resp = filedialog.askdirectory()
-            if resp: root.modpath = resp
+            if resp: root.path.modpath = resp
 
         sel_mod_dir_btn = ttk.Button(master=root,
                                      text="模組資料夾",
@@ -66,15 +66,15 @@ class App:
 
         def included_mod_dir_btn_command():
             resp = filedialog.askdirectory()
-            if resp: root.included_modpaths.append(resp)
+            if resp: root.path.included_modpaths.append(resp)
             name_list = list()
             
-            for path in root.included_modpaths:
+            for path in root.path.included_modpaths:
                 try:
                     name = get_mod_name(path)
                     name_list.append(name)
                 except:
-                    root.included_modpaths.pop()
+                    root.path.included_modpaths.pop()
                     msg.show_error(message=f"路徑{path}無法辨識為模組")
             info_strvar.set(f"當前引用模組:{name_list}")
 
@@ -100,7 +100,7 @@ class App:
     
     def update_task(self) -> None:
         #檢查是否設定鋼四資料夾
-        if not root.has_updated and root.hoi4path is not None:
+        if not root.has_updated and root.path.hoi4path is not None:
             
             execute_list = list()
             args_list = list()
@@ -131,7 +131,6 @@ class App:
                 self.character_btn.config(state="normal")
                 self.map_view_btn.config(state="normal")
                 self.read_btn.config(state="normal")
-                self.sel_dir_btn.config(state="disabled")
             append_mission(update_btn,(),None,"更新畫面")
 
             self.rw = RunningWindow(execute_list=execute_list,
