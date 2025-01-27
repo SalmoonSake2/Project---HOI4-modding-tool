@@ -93,7 +93,7 @@ class Mapview:
             province_data = Province.from_color(color)
 
             terrain = province_data.terrain
-            state = State.from_province(province_data)
+            state = State.from_province_id(province_data)
 
             province_name = f"({loc(f"VICTORY_POINTS_{province_data.id}")})"
             

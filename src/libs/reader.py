@@ -363,7 +363,6 @@ def read_map_files(running_window:RunningWindow) -> None:
         try:
 
             #列出可以讀取的state檔案
-            state_data = dict()
             state_files = list(Path(path).joinpath("history/states").rglob("*txt"))
 
             #依序處理檔案
@@ -372,21 +371,21 @@ def read_map_files(running_window:RunningWindow) -> None:
                 file_reading = file
                 data = pdxread(file)[0]
 
-                state_id = data["id"]
+                state_id = int(data["id"])
                 
                 #紀錄
-                state_data[state_id] = State(id=state_id,
-                                             manpower=data["manpower"],
-                                             state_category=data["state_category"],
-                                             provinces=data["provinces"],
-                                             owner=data["history"]["owner"])
+                root.map_data.states[state_id] = State(id=state_id,
+                                                       manpower=data["manpower"],
+                                                       state_category=data["state_category"],
+                                                       provinces=data["provinces"],
+                                                       owner=data["history"]["owner"])
                 
                 #TODO: 新增更多資料內容
 
                 #依序將省分逆回來做映射
                 for province in data["provinces"]:
 
-                    root.map_data.map_mapping.province_to_state[province] = state_id
+                    root.map_data.map_mapping.province_to_state[int(province)] = state_id
 
                     if running_window.is_cancel_task: return
 
@@ -411,13 +410,13 @@ def read_map_files(running_window:RunningWindow) -> None:
 
                 file_reading = file
                 data = pdxread(file)[0]
-                strategicregion_id = data["id"]
+                strategicregion_id = int(data["id"])
                 provinces = data["provinces"]
                 root.map_data.strategicregions[strategicregion_id] = StrategicRegion(strategicregion_id,provinces)
 
                 #建立省分的逆向映射
                 for province in provinces:
-                    root.map_data.map_mapping.province_to_strategic[province] = strategicregion_id
+                    root.map_data.map_mapping.province_to_strategic[int(province)] = strategicregion_id
 
                     if running_window.is_cancel_task: return
 
@@ -438,7 +437,7 @@ def read_supply_node_file(file_path:str) -> set[int]:
         result = list()
         for line in file:
             province = line.strip().split(" ")[1]
-            result.append(province)
+            result.append(int(province))
     
     return set(result)
 
@@ -453,8 +452,12 @@ def read_railway_file(file_path:str) -> tuple[Railway]:
         result = list()
         for line in file:
             single_railway_data = line.strip().split(" ")
-            railway_level = single_railway_data[0]
-            railway_provinces = tuple(single_railway_data[2:len(single_railway_data)])
+            railway_level = int(single_railway_data[0])
+
+            converted = list()
+            for province in single_railway_data[2:len(single_railway_data)]:
+                converted.append(int(province))
+            railway_provinces = converted[:]
             result.append(Railway(railway_level,railway_provinces))
     return tuple(result)
 
@@ -515,10 +518,10 @@ def read_country_color(running_window:RunningWindow) -> None:
                 
     # 匹配 RGB 和 HSV 顏色數據
     pattern_rgb = re.compile(
-        r"(\w+)\s*=\s*\{\s*color\s*=\s*rgb\s*\{\s*(\d+)\s+(\d+)\s+(\d+)\s*\}", re.DOTALL
+        r"(\w+)\s*=\s*\{\s*color\s*=\s*(?i:rgb)\s*\{\s*(\d+)\s+(\d+)\s+(\d+)\s*\}", re.DOTALL
     )
     pattern_hsv = re.compile(
-        r"(\w+)\s*=\s*\{\s*color\s*=\s*hsv\s*\{\s*([\d.]+)\s+([\d.]+)\s+([\d.]+)\s*\}", re.DOTALL
+        r"(\w+)\s*=\s*\{\s*color\s*=\s*(?i:hsv)\s*\{\s*([\d.]+)\s+([\d.]+)\s+([\d.]+)\s*\}", re.DOTALL
     )
 
     # 提取數據
@@ -574,16 +577,23 @@ def create_state_map_image(running_window:RunningWindow) -> None:
     建立地塊視圖
     '''
     running_window.update_progress(0)
-    province_image = root.game_image.province_image.copy()
-    w,h = province_image.size
+    state_image = root.game_image.province_image.copy()
+    w,h = state_image.size
 
-    pixels = province_image.load()
+    pixels = state_image.load()
 
     state_definition = dict()   #dict[list]，代表特定state id 之下的province顏色指派
     recorded_state = set()      #用於在後續檢查時確認是否已經有存在的地塊顏色
 
     #預先建立查詢表以加快速度
-    color_to_state = {color : State.from_province_id(Province.from_color(color).id) for color in root.map_data.color_mapping.avalible_color}
+    color_to_state = dict()
+    for color in root.map_data.color_mapping.avalible_color:
+        state = State.from_province_id(Province.from_color(color).id)
+        if state is not None:
+            color_to_state[color] = state.id
+        
+        else:
+            color_to_state[color] = None
 
     #對每個像素逐一檢查並修改
     for x in range(w):
@@ -596,19 +606,21 @@ def create_state_map_image(running_window:RunningWindow) -> None:
             state = color_to_state[pixels[x,y]]
 
             #如果是海洋省份或未登記的省分，那就跳過該輪檢查
-            if state is None: continue
+            if state is None:
+                pixels[x,y] = (0,0,0)   #black
+                continue
                 
             #如果是尚未紀錄的省分
-            if state.id not in recorded_state:
-                state_definition[state.id] = pixels[x,y]
-                recorded_state.add(state.id)
+            if state not in recorded_state:
+                state_definition[state] = pixels[x,y]
+                recorded_state.add(state)
             
             #繪製
-            pixels[x,y] = state_definition[state.id]
+            pixels[x,y] = state_definition[state]
 
         running_window.update_progress(int((x/w)*100))
     
-    root.game_image.state_map =  province_image
+    root.game_image.state_map =  state_image
 
 def create_strategic_map_image(running_window:RunningWindow) -> None:
     '''
@@ -661,7 +673,7 @@ def create_nation_map_image(running_window:RunningWindow) -> None:
     有條件的真的太麻煩，情況太多，不考慮處理。
     '''
     running_window.update_progress(0)
-    nation_map_image = root.game_image.state_map.copy()
+    nation_map_image = root.game_image.province_image.copy()
 
     pixels = nation_map_image.load()
 
@@ -674,6 +686,9 @@ def create_nation_map_image(running_window:RunningWindow) -> None:
 
         except AttributeError:
             get_country_color[color] = (0,0,0) #black
+        
+        except KeyError:
+            get_country_color[color] = (25,25,25)   #gray
     
     #對每個像素進行繪製
     w,h = nation_map_image.size
