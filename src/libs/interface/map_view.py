@@ -9,7 +9,7 @@ import ttkbootstrap as ttk
 from libs.enums import *
 from libs.interface.localisation import loc
 from libs.interface.image_view import Imageview
-from libs.map import Province, State
+from libs.map import *
 from libs.root import root
 
 class Mapview:
@@ -93,7 +93,7 @@ class Mapview:
             province_data = Province.from_color(color)
 
             terrain = province_data.terrain
-            state = State.from_province_id(province_data)
+            state = State.from_province_id(province_data.id)
 
             province_name = f"({loc(f"VICTORY_POINTS_{province_data.id}")})"
             
@@ -115,9 +115,10 @@ class Mapview:
             #以顏色獲取資料
             province_data = Province.from_color(color)
 
-            state = State.from_province(province_data)
+            if province_data is not None:
+                state = State.from_province_id(province_data.id)
 
-            if state is None:
+            if province_data is None:
                 self.imageview.itemconfig("_text",text="海洋")
 
             else:
@@ -143,7 +144,7 @@ class Mapview:
 
             #以顏色獲取國家TAG
             try:
-                country_tag = root.state_country_color_mapping[color]
+                country_tag = State.from_province_id(Province.from_color(color).id).owner
 
                 self.imageview.itemconfig("_text",text=f"{loc(country_tag+"_DEF")}({country_tag})")
             except:
@@ -151,9 +152,9 @@ class Mapview:
 
         elif self.mode == "strategic":
             try:
-                strategic_id = root.province_strategic_mapping[Province.from_color(color).id]
+                strategic = StrategicRegion.from_province_id(Province.from_color(color).id)
 
-                self.imageview.itemconfig("_text",text=f"{loc(root.map_data["strategicregion"][strategic_id][0]["name"].strip('"'))}(#{strategic_id})")
+                self.imageview.itemconfig("_text",text=f"{loc(root.map_data.strategicregions[strategic.id].name)}(#{strategic.id})")
             except:
                 self.imageview.itemconfig("_text",text="")
 

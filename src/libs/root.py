@@ -53,7 +53,7 @@ class Mapdata:
         self.continents: dict[int,str] = dict()                 #大陸指派，以id為key找到其字串
         self.supply_nodes: set[int] = set()                     #補給基地的所在省分
         self.railways: tuple[Railway]                           #鐵路
-        self.strategicregions:dict[int,PDXstatement] = dict()   #map/strategicregions
+        self.strategicregions:dict[int,StrategicRegion] = dict()   #map/strategicregions
         self.states:dict[int,State] = dict()                    #地塊
 
         self.map_mapping:MapMapping = MapMapping()              #地圖元件映射

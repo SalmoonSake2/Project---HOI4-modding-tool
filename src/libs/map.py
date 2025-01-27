@@ -36,7 +36,11 @@ class Province:
         '''
         由給予的顏色獲取省分
         '''
-        return root.map_data.province[root.map_data.color_mapping.province_id_from_color[color]]
+        try:
+            return root.map_data.province[root.map_data.color_mapping.province_id_from_color[color]]
+        
+        except KeyError:
+            return None
 
 class Adjacency:
     '''
@@ -179,8 +183,9 @@ class StrategicRegion:
     '''
     戰略區
     '''
-    def __init__(self,id:int,provinces:tuple[int]) -> None:
+    def __init__(self,id:int,provinces:tuple[int],name:str) -> None:
         self.id = id
+        self.name = name
         self.provinces = provinces
     
     @staticmethod

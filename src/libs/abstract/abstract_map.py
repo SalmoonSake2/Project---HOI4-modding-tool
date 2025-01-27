@@ -141,8 +141,9 @@ class State:
     def from_province_id(province_id:int) -> 'State':...
 
 class StrategicRegion:
-    def __init__(self,id:int,provinces:tuple[int]) -> None:
+    def __init__(self,id:int,provinces:tuple[int],name:str) -> None:
         self.id = id
+        self.name = name
         self.provinces = provinces
     
     @staticmethod

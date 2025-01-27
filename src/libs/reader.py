@@ -412,7 +412,8 @@ def read_map_files(running_window:RunningWindow) -> None:
                 data = pdxread(file)[0]
                 strategicregion_id = int(data["id"])
                 provinces = data["provinces"]
-                root.map_data.strategicregions[strategicregion_id] = StrategicRegion(strategicregion_id,provinces)
+                name = data["name"].strip('"')
+                root.map_data.strategicregions[strategicregion_id] = StrategicRegion(strategicregion_id,provinces,name)
 
                 #建立省分的逆向映射
                 for province in provinces:
