@@ -41,19 +41,36 @@ class PDXstatement:
     
     def __getitem__(self, key):
 
+        #getitem只適用於本身value屬於list[PDXStatement]的
         if not isinstance(self.value,list):
-            return
-        #依序尋找
+            raise Exception("__getitem__() method can only be used on the PDXStatement object with PDXstatment as value.")
+        
+        if len(self.value) > 0:
+            if not isinstance(self.value[0],PDXstatement):
+                raise Exception("__getitem__() method can only be used on the PDXStatement object with PDXstatment as value.")
+        
+        #依序尋找符合的關鍵字
+        result = list()
         for statement in self.value:
             if statement.keyword == key:
 
                 #對於value是script類型(list[PDXStatement])，提供方便進入下一層的接口
                 if len(statement.value) > 0:
                     if isinstance(statement.value[0],PDXstatement):
-                        return PDXstatement(statement.keyword,statement.value)
-                
-                return statement.value
-        return
+                        result.append(PDXstatement(statement.keyword,statement.value))
+                    else:
+                        result.append(statement.value)
+                else:
+                    result.append(None)
+
+        if len(result) == 0:
+            return None
+        
+        elif len(result) == 1:
+            return result[0]
+
+        else:
+            return result
 
 def read(path:str) -> list['PDXstatement']:
     '''

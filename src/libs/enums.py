@@ -4,6 +4,10 @@ enums.py
 常數或遊戲配置
 '''
 
+class fc:
+    RED = "\033[91m"
+    CC = "\033[0m"
+
 RIVERCOLOR:dict[tuple,str] = {
     (0,255,0):"源頭",
     (255,0,0):"流入",

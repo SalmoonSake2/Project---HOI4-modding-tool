@@ -3,10 +3,12 @@ reader.py
 讀取文檔相關的操作
 '''
 import re
+import traceback as tb
 
 from pathlib import Path
 from PIL import Image
 
+from libs.enums import *
 from libs.interface.running_window import RunningWindow
 from libs.map import *
 from libs.pdxscript import read as pdxread
@@ -148,33 +150,43 @@ def read_map_files(running_window:RunningWindow) -> None:
     import numpy as np
 
     running_window.update_progress(0)
+    print("正在處理圖像")
 
     #讀取圖像(heightmap.bmp、provinces.bmp、rivers.bmp、terrain.bmp)
     for path in root.path.avalible_path:
         try: root.game_image.heightmap_image = Image.open(path +"/map/heightmap.bmp")
         except FileNotFoundError: pass
         except Exception as e:
-            running_window.exception = f"處理以下檔案時發生錯誤:{path},{e}"
+            running_window.exception = f"處理以下檔案時發生錯誤:{path+"/map/heightmap.bmp"},{e}"
+            print(fc.RED+tb.format_exc()+fc.CC)
+            return
 
     for path in root.path.avalible_path:
         try: root.game_image.province_image = Image.open(path + "/map/provinces.bmp")
         except FileNotFoundError: pass
         except Exception as e:
-            running_window.exception = f"處理以下檔案時發生錯誤:{path},{e}"
+            running_window.exception = f"處理以下檔案時發生錯誤:{path + "/map/provinces.bmp"},{e}"
+            print(fc.RED+tb.format_exc()+fc.CC)
+            return
 
     for path in root.path.avalible_path:
         try: root.game_image.rivers_image = Image.open(path +"/map/rivers.bmp")
         except FileNotFoundError: pass
         except Exception as e:
-            running_window.exception = f"處理以下檔案時發生錯誤:{path},{e}"
+            running_window.exception = f"處理以下檔案時發生錯誤:{path +"/map/rivers.bmp"},{e}"
+            print(fc.RED+tb.format_exc()+fc.CC)
+            return
 
     for path in root.path.avalible_path:
         try: root.game_image.terrain_image = Image.open(path +"/map/terrain.bmp")
         except FileNotFoundError: pass
         except Exception as e:
-            running_window.exception = f"處理以下檔案時發生錯誤:{path},{e}"
+            running_window.exception = f"處理以下檔案時發生錯誤:{path +"/map/terrain.bmp"},{e}"
+            print(fc.RED+tb.format_exc()+fc.CC)
+            return
     
     running_window.update_progress(5)
+    print("正在處理map/definition.csv")
 
     #處理省分定義(definition.csv)
     province_definitions_csv_column_names = ("id","r","g","b","type","coastal","category","continent")
@@ -213,13 +225,17 @@ def read_map_files(running_window:RunningWindow) -> None:
 
         except FileNotFoundError: pass
         except Exception as e:
-            running_window.exception = f"處理以下檔案時發生錯誤:{path},{e}"
+            running_window.exception = f"處理以下檔案時發生錯誤:{Path(path).joinpath("map").joinpath("definition.csv")},{e}"
+            print(fc.RED+tb.format_exc()+fc.CC)
+            return
     
     running_window.update_progress(15)
+    print("正在處理map/adjacencies.csv")
 
     #處理省分連結(adjacencies.csv)
     #文件的最後一行必須是-1;-1;-1;-1;-1;-1;-1;-1;-1
     for path in root.path.avalible_path:
+        file_reading = Path(path).joinpath("map").joinpath("adjacencies.csv")
         try:
             adjacencies_array = np.genfromtxt(Path(path).joinpath("map").joinpath("adjacencies.csv"),
                                              delimiter=";",
@@ -243,14 +259,18 @@ def read_map_files(running_window:RunningWindow) -> None:
 
         except FileNotFoundError: pass
         except Exception as e:
-            running_window.exception = f"處理以下檔案時發生錯誤:{path},{e}"
+            running_window.exception = f"處理以下檔案時發生錯誤:{file_reading},{e}"
+            print(fc.RED+tb.format_exc()+fc.CC)
+            return
     
     running_window.update_progress(20)
+    print("正在處理map/adjacency_rules.txt")
 
     #處理省分連結規則(adjacency_rules.txt)
     for path in root.path.avalible_path:
 
         try: 
+            file_reading = Path(path).joinpath("map").joinpath("adjacency_rules.txt")
             adjacency_rules_data = pdxread(Path(path).joinpath("map").joinpath("adjacency_rules.txt"))
 
             #逐一讀取每一條規則
@@ -269,12 +289,10 @@ def read_map_files(running_window:RunningWindow) -> None:
 
                 for relationship in relationships:
 
-                    contested_passing_rule = statement[relationship]
-
-                    army_rule = True if PDXstatement("rule",contested_passing_rule)["army"] == "yes" else False
-                    navy_rule = True if PDXstatement("rule",contested_passing_rule)["navy"] == "yes" else False
-                    submarine_rule = True if PDXstatement("rule",contested_passing_rule)["submarine"] == "yes" else False
-                    trade_rule = True if PDXstatement("rule",contested_passing_rule)["trade"] == "yes" else False
+                    army_rule = True if statement[relationship]["army"] == "yes" else False
+                    navy_rule = True if statement[relationship]["navy"] == "yes" else False
+                    submarine_rule = True if statement[relationship]["submarine"] == "yes" else False
+                    trade_rule = True if statement[relationship]["trade"] == "yes" else False
 
                     passing_rule[relationship] = (army_rule,navy_rule,submarine_rule,trade_rule)
                 
@@ -293,12 +311,16 @@ def read_map_files(running_window:RunningWindow) -> None:
 
         except FileNotFoundError: pass
         except Exception as e:
-            running_window.exception = f"處理以下檔案時發生錯誤:{path},{e}"
+            running_window.exception = f"處理以下檔案時發生錯誤:{file_reading},{e}"
+            print(fc.RED+tb.format_exc()+fc.CC)
+            return
 
     running_window.update_progress(25)
+    print("正在處理map/continent.txt")
 
     #處理大陸(continent.txt)
     for path in root.path.avalible_path:
+        file_reading = Path(path).joinpath("map").joinpath("continent.txt")
         try: 
             continents = pdxread(Path(path).joinpath("map").joinpath("continent.txt"))[0].value
 
@@ -310,33 +332,45 @@ def read_map_files(running_window:RunningWindow) -> None:
 
         except FileNotFoundError: pass
         except Exception as e:
-            running_window.exception = f"處理以下檔案時發生錯誤:{path},{e}"
+            running_window.exception = f"處理以下檔案時發生錯誤:{file_reading},{e}"
+            print(fc.RED+tb.format_exc()+fc.CC)
+            return
 
     running_window.update_progress(27)
+    print("正在處理map/supply_nodes.txt")
 
     #處理補給基地(supply_nodes.txt)
     for path in root.path.avalible_path:
+        file_reading = Path(path).joinpath("map").joinpath("supply_nodes.txt")
         try: root.map_data.supply_nodes = read_supply_node_file(Path(path).joinpath("map").joinpath("supply_nodes.txt"))
         except FileNotFoundError: pass
         except Exception as e:
-            running_window.exception = f"處理以下檔案時發生錯誤:{path},{e}"
+            running_window.exception = f"處理以下檔案時發生錯誤:{file_reading},{e}"
+            print(fc.RED+tb.format_exc()+fc.CC)
+            return
 
     running_window.update_progress(30)
+    print("正在處理map/railways.txt")
 
     #處理鐵路(railways.txt)
     for path in root.path.avalible_path:
+        file_reading = Path(path).joinpath("map").joinpath("railways.txt")
         try: root.map_data.railways = read_railway_file(Path(path).joinpath("map").joinpath("railways.txt"))
         except FileNotFoundError: pass
         except Exception as e:
-            running_window.exception = f"處理以下檔案時發生錯誤:{path},{e}"
+            running_window.exception = f"處理以下檔案時發生錯誤:{file_reading},{e}"
+            print(fc.RED+tb.format_exc()+fc.CC)
+            return
     
     running_window.update_progress(35)
+    print("正在處理map/unitstacks.txt")
 
     #處理物件位置(unitstacks.txt)，事實上我只關心victory_point的位置
     unitstack_column_names = ("id","type","x","y","z","rotation","offset")
 
     for path in root.path.avalible_path:
         try:
+            file_reading = Path(path).joinpath("map").joinpath("unitstacks.txt")
             unitstacks_array = np.genfromtxt(Path(path).joinpath("map").joinpath("unitstacks.txt"),
                                             delimiter=";",
                                             dtype=None,
@@ -354,9 +388,12 @@ def read_map_files(running_window:RunningWindow) -> None:
 
         except FileNotFoundError: pass
         except Exception as e:
-            running_window.exception = f"處理以下檔案時發生錯誤:{path},{e}"
+            running_window.exception = f"處理以下檔案時發生錯誤:{file_reading},{e}"
+            print(fc.RED+tb.format_exc()+fc.CC)
+            return
     
     running_window.update_progress(40)
+    print("正在處理history/state")
 
     #處理地塊(state)
     for path in root.path.avalible_path:
@@ -369,18 +406,61 @@ def read_map_files(running_window:RunningWindow) -> None:
             for file in state_files:
 
                 file_reading = file
+
                 data = pdxread(file)[0]
 
                 state_id = int(data["id"])
+
+                '''
+                留意以下表示法:
+
+                resources = {a = 1 b = 2}
+                或是
+                resources = {a = 1}
+                resources = {b = 2}
+
+                有時候會出現
+                resources = { }
+                抑或者完全不寫
+
+                總之最後要形成resource_name: count 的dict
+                '''
+                if data["resources"] is not None and data["resources"] != []:
+
+                    #寫在一起
+                    if isinstance(data["resources"],PDXstatement):
+                        resources = { statement.keyword: statement.value for statement in data["resources"].value}
+
+                    #並排分開
+                    else:
+                        resources = {statement.value[0].keyword : statement.value[0].value for statement in data["resources"]}
+                else:
+                    resources = None
+
+                if data["buildings"] is not None:
+                    buildings = set([Building(statement.keyword,statement.value) for statement in data["history"]["buildings"]])
                 
+                else:
+                    buildings = None
+                
+                if data["history"]["victory_points"] is not None:
+                    victory_point_list = [data["history"]["victory_points"],] if isinstance(data["history"]["victory_points"][0],int) else data["history"]["victory_points"]
+
                 #紀錄
                 root.map_data.states[state_id] = State(id=state_id,
                                                        manpower=data["manpower"],
                                                        state_category=data["state_category"],
                                                        provinces=data["provinces"],
-                                                       owner=data["history"]["owner"])
-                
-                #TODO: 新增更多資料內容
+                                                       owner=data["history"]["owner"],
+                                                       local_supply=data["local_supplies"],
+                                                       core=data["history"]["add_core_of"],
+                                                       claim=data["history"]["add_claim_of"],
+                                                       demilitarized_zone= True if data["history"]["set_demilitarized_zone"] == "yes" else False,
+                                                       controller= data["history"]["controller"],
+                                                       victory_points= {victory_point[0]: victory_point[1] for victory_point in victory_point_list},
+                                                       resources=resources,
+                                                       buildings=buildings,
+                                                       impassable=True if data["impassable"] == "yes" else False)
 
                 #依序將省分逆回來做映射
                 for province in data["provinces"]:
@@ -392,6 +472,7 @@ def read_map_files(running_window:RunningWindow) -> None:
         except FileNotFoundError: pass
         except Exception as e:
             running_window.exception = f"讀取{file_reading}出現錯誤:{e}"
+            print(fc.RED+tb.format_exc()+fc.CC)
             return
 
     running_window.update_progress(90)
@@ -416,13 +497,16 @@ def read_map_files(running_window:RunningWindow) -> None:
                 root.map_data.strategicregions[strategicregion_id] = StrategicRegion(strategicregion_id,provinces,name)
 
                 #建立省分的逆向映射
-                for province in provinces:
-                    root.map_data.map_mapping.province_to_strategic[int(province)] = strategicregion_id
+                #留意: 原版的15 - Asia是空的
+                if provinces is not None:
+                    for province in provinces:
+                        root.map_data.map_mapping.province_to_strategic[int(province)] = strategicregion_id
 
-                    if running_window.is_cancel_task: return
+                        if running_window.is_cancel_task: return
 
         except Exception as e:
             running_window.exception = f"讀取{file_reading}出現錯誤:{e}"
+            print(fc.RED+tb.format_exc()+fc.CC)
             return
 
     running_window.update_progress(100)

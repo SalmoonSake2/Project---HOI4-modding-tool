@@ -153,6 +153,7 @@ class State:
                  core:set[str] = None,
                  claim:set[str] = None,
                  impassable:bool = False,
+                 demilitarized_zone:bool = False,
                  controller:str = None) -> None:
         
         self.id = id
@@ -168,6 +169,7 @@ class State:
         self.claim = claim
         self.impassable = impassable
         self.controller = controller
+        self.demilitarized_zone = demilitarized_zone
     
     @staticmethod
     def from_province_id(province_id:int) -> 'State':
