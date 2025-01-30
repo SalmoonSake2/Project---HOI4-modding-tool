@@ -62,14 +62,26 @@ class Mapview:
             view_mode_button[mode] = button
             view_mode_button[mode].pack(side="left",pady=5)
         
-        info_frame = ttk.Labelframe(master=toplevel,width=350,text="詳細資訊")
-        info_frame.pack(side="left",fill="both",expand=True,padx=5,pady=5)
+        self.info_frame = ttk.Labelframe(master=toplevel,width=350,text="詳細資訊")
+        self.info_frame.pack(side="left",fill="both",expand=True,padx=5,pady=5)
+        self.inner_info_frame = ttk.Frame(master=self.info_frame)
+        self.inner_info_frame.pack(fill="both")
     
     def show_map_item(self,event) -> None:
         '''
         顯示選中物件的資訊
         '''
-        ...
+        img_position = self.imageview.get_image_postion(event.x,event.y)
+
+        if img_position is not None:
+            img_x, img_y = img_position
+        
+        else:
+            return
+
+        if self.mode == "province":
+            color = root.game_image.province_image.getpixel((img_x, img_y))
+            province_data = Province.from_color(color)
 
     def get_hover_color(self,event) -> None:
         '''
@@ -174,5 +186,10 @@ class Mapview:
             case "river":       using_image = root.game_image.rivers_image
             case "heightmap":   using_image = root.game_image.heightmap_image
             case "terrain":     using_image = root.game_image.terrain_image
+        
+        match self.mode:
+            case "province":
+                self.inner_info_frame.destroy()
+                self.inner_info_frame = ttk.Frame(master=self.info_frame)
             
         self.imageview.set_image(using_image)

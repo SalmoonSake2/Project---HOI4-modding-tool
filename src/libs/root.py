@@ -2,6 +2,8 @@
 root.py
 
 繼承自ttk.Window的類型，儲存更多資訊如使用者變數與資訊
+
+更新時請檢察cache_reader.py是否正常修改
 '''
 
 from PIL import Image
@@ -75,6 +77,7 @@ class Root(ttk.Window):
     def __init__(self,*args,**kwargs) -> None:
         super().__init__(*args,**kwargs)
         self.mod_lang: str = "simp_chinese"     #模組開發語言(主要影響讀取本地化文件時的路徑)
+        self.using_cache:bool = True
         self.game_loc: dict = dict()            #本地化文件
         self.path:Rootpath = Rootpath()         #路徑
         self.map_data:Mapdata = Mapdata()       #地圖資訊

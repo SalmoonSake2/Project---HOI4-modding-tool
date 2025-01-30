@@ -13,8 +13,9 @@ from ttkbootstrap.dialogs import Messagebox as msg
 from libs.interface.character_creater import Character_creater
 from libs.interface.map_view import Mapview
 from libs.interface.running_window import RunningWindow
+from libs.cache_reader import save_cache, load_cache
 from libs.reader import *
-from libs.root import root  #首次被執行
+from libs.root import root
 
 class App:
     def __init__(self) -> None:
@@ -115,14 +116,21 @@ class App:
 
             append_mission(check_path_avalibility,(),None,"確認路徑有效性")
             append_mission(integrate_path,(),None,"整合路徑")
-            append_mission(read_loc_files,(),None,"讀取本地化文件")
-            append_mission(read_map_files,(),None,"讀取地圖")
-            append_mission(read_country_tag_file,(),None,"讀取國家代碼")
-            append_mission(read_country_color,(),None,"讀取國家配色")
-            append_mission(create_province_map_image,(),None,"繪製省分地圖")
-            append_mission(create_state_map_image,(),None,"繪製地塊地圖")
-            append_mission(create_strategic_map_image,(),None,"繪製戰略區地圖")
-            append_mission(create_nation_map_image,(),None,"繪製政權地圖")
+
+            if not root.using_cache:
+                append_mission(read_loc_files,(),None,"讀取本地化文件")
+                append_mission(read_map_files,(),None,"讀取地圖")
+                append_mission(read_country_tag_file,(),None,"讀取國家代碼")
+                append_mission(read_country_color,(),None,"讀取國家配色")
+                append_mission(create_province_map_image,(),None,"繪製省分地圖")
+                append_mission(create_state_map_image,(),None,"繪製地塊地圖")
+                append_mission(create_strategic_map_image,(),None,"繪製戰略區地圖")
+                append_mission(create_nation_map_image,(),None,"繪製政權地圖")
+            else:
+                append_mission(load_cache,(),None,"讀取快取")
+
+            if not root.using_cache:
+                append_mission(save_cache,(),None,"建立快取")
 
             def update_btn(running_window): 
                 '''
