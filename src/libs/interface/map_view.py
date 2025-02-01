@@ -107,6 +107,18 @@ class Mapview:
 
             type_label = ttk.Label(master=self.inner_info_frame,text="類型: "+province_type)
             type_label.grid(column=0,row=4,padx=10,sticky=ttk.W)
+
+            if province_data.buildings is not None:
+                building_text = ""
+                
+                for building in province_data.buildings:
+                    building_text += loc(building.name) + f"x{building.level} "
+
+            else:
+                building_text = "無"
+
+            building_label = ttk.Label(master=self.inner_info_frame,text=f"建築: {building_text}",justify="left")
+            building_label.grid(column=0,row=5,padx=10,sticky=ttk.W)
         
         elif self.mode == "state":
             color = root.game_image.state_map.getpixel((img_x, img_y))

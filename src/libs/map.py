@@ -28,8 +28,8 @@ class Province:
         self.type = type            #省分海陸
         self.coastal = coastal      #省分臨海
         self.continent = continent  #省分大陸
-        self.pos:tuple[int,int]     #勝利點座標(西南原點)
-        self.buildings:set[Building]    #建築
+        self.pos:tuple[int,int]  = None   #勝利點座標(西南原點)
+        self.buildings:set[Building] = None    #建築
     
     @staticmethod
     def from_color(color:tuple[int,int,int]) -> 'Province':

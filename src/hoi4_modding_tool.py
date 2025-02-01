@@ -76,14 +76,14 @@ class App:
         self.load_data_menu = ttk.Menu(master=file_menu)
 
         def read_and_load_command(is_using_cache:bool):
-            self.load_data_menu.entryconfig("使用快取導入",state="disabled")
-            self.load_data_menu.entryconfig("建立快取並導入",state="disabled")
+            self.load_data_menu.entryconfig("使用快取匯入",state="disabled")
+            self.load_data_menu.entryconfig("建立快取並匯入",state="disabled")
             self.read_and_load_file(is_using_cache)
 
-        self.load_data_menu.add_command(label="使用快取導入",command= lambda x = True:read_and_load_command(x),state=ttk.DISABLED)
-        self.load_data_menu.add_command(label="建立快取並導入",command= lambda x = False:read_and_load_command(x))
+        self.load_data_menu.add_command(label="使用快取匯入",command= lambda x = True:read_and_load_command(x),state=ttk.DISABLED)
+        self.load_data_menu.add_command(label="建立快取並匯入",command= lambda x = False:read_and_load_command(x))
 
-        file_menu.add_cascade(label="導入資料...",menu=self.load_data_menu)
+        file_menu.add_cascade(label="匯入資料",menu=self.load_data_menu)
         file_menu.add_command(label="輸出",state=ttk.DISABLED)
         menubar.add_cascade(menu=file_menu,label="檔案")
 
@@ -189,8 +189,8 @@ class App:
             append_mission(load_cache,(),None,"讀取快取")
 
         def update_btn(running_window): 
-            self.load_data_menu.entryconfig("使用快取導入",state="normal")
-            self.load_data_menu.entryconfig("建立快取並導入",state="normal")
+            self.load_data_menu.entryconfig("使用快取匯入",state="normal")
+            self.load_data_menu.entryconfig("建立快取並匯入",state="normal")
 
         append_mission(update_btn,(),None,"更新畫面")
 
@@ -207,11 +207,11 @@ class App:
         '''
 
         if Path("data/cache.dat").exists() and not self.has_cache:
-            self.load_data_menu.entryconfig("使用快取導入",state=ttk.NORMAL)
+            self.load_data_menu.entryconfig("使用快取匯入",state=ttk.NORMAL)
             self.has_cache = True
         
         elif not Path("data/cache.dat").exists() and self.has_cache:
-            self.load_data_menu.entryconfig("使用快取導入",state=ttk.DISABLED)
+            self.load_data_menu.entryconfig("使用快取匯入",state=ttk.DISABLED)
             self.has_cache = False
 
         root.after(ms=500,func=self.update_task)
