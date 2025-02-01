@@ -215,7 +215,7 @@ def read_map_files(running_window:RunningWindow) -> None:
                                                               color=color,
                                                               type=data["type"],
                                                               terrain=data["category"],
-                                                              coastal= True if data["coastal"] == "true" else False,
+                                                              coastal= True if data["coastal"] else False,
                                                               continent=data["continent"])
                 
                 #建立顏色查詢表
@@ -437,24 +437,48 @@ def read_map_files(running_window:RunningWindow) -> None:
                 else:
                     resources = None
 
-                if data["buildings"] is not None:
-                    buildings = set([Building(statement.keyword,statement.value) for statement in data["history"]["buildings"]])
-                
+                if data["history"]["buildings"] is not None:
+
+                    if len(data["history"]["buildings"].value) != 0:
+
+                        buildings = set()
+                        
+                        for statement in data["history"]["buildings"].value:
+
+                            if not isinstance(statement.value,list):
+                                buildings.add(Building(statement.keyword,statement.value))
+                            
+                            else:
+                                province_buildings = set()
+                                
+                                for province_statement in statement.value:
+                                    province_buildings.add(Building(name=province_statement.keyword,level=province_statement.value))
+
+                                root.map_data.province[int(statement.keyword)].buildings = province_buildings
+
+                    else:
+                        buildings = None
                 else:
                     buildings = None
                 
                 if data["history"]["victory_points"] is not None:
                     victory_point_list = [data["history"]["victory_points"],] if isinstance(data["history"]["victory_points"][0],int) else data["history"]["victory_points"]
+                
+                #參見history/states/190-Kurzeme.txt，他重複兩次category不知道在衝三小
+                try:
+                    state_category = data["state_category"].strip('"')
+                except:
+                    state_category = data["state_category"][-1].strip('"')
 
                 #紀錄
                 root.map_data.states[state_id] = State(id=state_id,
                                                        manpower=data["manpower"],
-                                                       state_category=data["state_category"],
+                                                       state_category=state_category,
                                                        provinces=data["provinces"],
                                                        owner=data["history"]["owner"],
                                                        local_supply=data["local_supplies"],
                                                        core=data["history"]["add_core_of"],
-                                                       claim=data["history"]["add_claim_of"],
+                                                       claim=data["history"]["add_claim_by"],
                                                        demilitarized_zone= True if data["history"]["set_demilitarized_zone"] == "yes" else False,
                                                        controller= data["history"]["controller"],
                                                        victory_points= {victory_point[0]: victory_point[1] for victory_point in victory_point_list},

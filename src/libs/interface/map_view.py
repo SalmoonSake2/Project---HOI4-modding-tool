@@ -10,6 +10,7 @@ from libs.enums import *
 from libs.interface.localisation import loc
 from libs.interface.image_view import Imageview
 from libs.map import *
+from libs.stringutil import listring
 from libs.root import root
 
 class Mapview:
@@ -78,10 +79,124 @@ class Mapview:
         
         else:
             return
+        
+        self.inner_info_frame.destroy()
+        self.inner_info_frame = ttk.Frame(master=self.info_frame)
+        self.inner_info_frame.pack(side="left",fill="both",pady=10)
 
         if self.mode == "province":
             color = root.game_image.province_image.getpixel((img_x, img_y))
             province_data = Province.from_color(color)
+            name_label = ttk.Label(master=self.inner_info_frame,text="名稱: "+loc(f"VICTORY_POINTS_{province_data.id}"))
+            name_label.grid(column=0,row=0,padx=10,sticky=ttk.W)
+            id_label = ttk.Label(master=self.inner_info_frame,text="ID: "+str(province_data.id))
+            id_label.grid(column=0,row=1,padx=10,sticky=ttk.W)
+            terrain_label = ttk.Label(master=self.inner_info_frame,text="地形: "+loc(province_data.terrain))
+            terrain_label.grid(column=0,row=2,padx=10,sticky=ttk.W)
+            continent_label = ttk.Label(master=self.inner_info_frame,text="大陸: "+loc(root.map_data.continents[province_data.continent]) if province_data.continent != 0 else "大陸: 無歸屬")
+            continent_label.grid(column=0,row=3,padx=10,sticky=ttk.W)
+
+            if province_data.type == "sea":
+                province_type = "海洋"
+            
+            elif province_data.type == "land" and province_data.coastal == True:
+                province_type = "海岸"
+            
+            else:
+                province_type = "陸地"
+
+            type_label = ttk.Label(master=self.inner_info_frame,text="類型: "+province_type)
+            type_label.grid(column=0,row=4,padx=10,sticky=ttk.W)
+        
+        elif self.mode == "state":
+            color = root.game_image.state_map.getpixel((img_x, img_y))
+            try:
+                state_data = State.from_province_id(Province.from_color(color).id)
+            except:
+                return
+            name_label = ttk.Label(master=self.inner_info_frame,text="名稱: "+loc(f"STATE_{state_data.id}"))
+            name_label.grid(row=0,column=0,padx=10,sticky=ttk.W)
+            id_label = ttk.Label(master=self.inner_info_frame,text="ID: "+str(state_data.id))
+            id_label.grid(row=1,column=0,padx=10,sticky=ttk.W)
+            manpower_label = ttk.Label(master=self.inner_info_frame,text="人口: "+str(state_data.manpower))
+            manpower_label.grid(row=2,column=0,padx=10,sticky=ttk.W)
+            category_label = ttk.Label(master=self.inner_info_frame,text="類型: "+loc(state_data.state_category))
+            category_label.grid(row=3,column=0,padx=10,sticky=ttk.W)
+            owner_label = ttk.Label(master=self.inner_info_frame,text="擁有者: "+loc(state_data.owner)+"("+str(state_data.owner)+")")
+            owner_label.grid(row=4,column=0,padx=10,sticky=ttk.W)
+            local_supply_label = ttk.Label(master=self.inner_info_frame,text="當地補給: "+str(state_data.local_supply))
+            local_supply_label.grid(row=5,column=0,padx=10,sticky=ttk.W)
+
+            if state_data.core is not None:
+
+                core_text = ""
+
+                if isinstance(state_data.core,list):
+                    for nation in state_data.core:
+                        core_text += loc(nation)+"("+str(nation)+") "
+                
+                else:
+                    core_text += loc(state_data.core)+"("+str(state_data.core)+") "
+            
+            else: 
+                core_text = "無"
+                
+            core_label = ttk.Label(master=self.inner_info_frame,text=f"核心: {core_text}")
+            core_label.grid(row=6,column=0,padx=10,sticky=ttk.W)
+
+            if state_data.claim is not None:
+
+                claim_text = ""
+
+                if isinstance(state_data.claim,list):
+                    for nation in state_data.claim:
+                        claim_text += loc(nation)+"("+str(nation)+") "
+                
+                else:
+                    claim_text += loc(state_data.claim)+"("+str(state_data.claim)+") "
+            
+            else: 
+                claim_text = "無"
+                
+            claim_label = ttk.Label(master=self.inner_info_frame,text=f"宣稱: {claim_text}")
+            claim_label.grid(row=7,column=0,padx=10,sticky=ttk.W)
+
+            resource_text = ""
+
+            if state_data.resources is not None:
+                for resource in state_data.resources:
+                    resource_text += loc(f"PRODUCTION_MATERIALS_{resource.upper()}")+f"x{int(state_data.resources[resource])} "
+
+            else:
+                resource_text = "無"
+
+            resource_label = ttk.Label(master=self.inner_info_frame,text=f"資源: {resource_text}")
+            resource_label.grid(row=8,column=0,padx=10,sticky=ttk.W)
+
+            building_text = ""
+
+            if state_data.buildings is not None:
+                for building in state_data.buildings:
+                    building_text += loc(building.name)+f"x{building.level} "
+
+            else:
+                building_text = "無"
+
+            building_label = ttk.Label(master=self.inner_info_frame,text=f"建築: {building_text}")
+            building_label.grid(row=9,column=0,padx=10,sticky=ttk.W)
+
+            if state_data.demilitarized_zone or state_data.impassable:
+
+                special_property_text = ""
+
+                if state_data.demilitarized_zone:
+                    special_property_text += "非軍事區 "
+                
+                if state_data.impassable:
+                    special_property_text += "不可通行 "
+
+                special_property_label = ttk.Label(master=self.inner_info_frame,text=special_property_text,style=ttk.DANGER)
+                special_property_label.grid(row=100,column=0,padx=10,sticky=ttk.W)
 
     def get_hover_color(self,event) -> None:
         '''
@@ -187,9 +302,8 @@ class Mapview:
             case "heightmap":   using_image = root.game_image.heightmap_image
             case "terrain":     using_image = root.game_image.terrain_image
         
-        match self.mode:
-            case "province":
-                self.inner_info_frame.destroy()
-                self.inner_info_frame = ttk.Frame(master=self.info_frame)
+        self.inner_info_frame.destroy()
+        self.inner_info_frame = ttk.Frame(master=self.info_frame)
+        self.inner_info_frame.pack()
             
         self.imageview.set_image(using_image)

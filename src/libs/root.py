@@ -77,14 +77,12 @@ class Root(ttk.Window):
     def __init__(self,*args,**kwargs) -> None:
         super().__init__(*args,**kwargs)
         self.mod_lang: str = "simp_chinese"     #模組開發語言(主要影響讀取本地化文件時的路徑)
-        self.using_cache:bool = True
+        self.using_cache:bool = True            #使用快取建立檔案
         self.game_loc: dict = dict()            #本地化文件
         self.path:Rootpath = Rootpath()         #路徑
         self.map_data:Mapdata = Mapdata()       #地圖資訊
         self.game_image:RootImage = RootImage() #圖像
 
-        self.has_updated: bool = True           #是否完成資料更新I/O
-
 root:Root = Root(title="鋼鐵雄心四模組工具",
                  themename="darkly",
-                 size=(400,500))
+                 size=(1000,600))
