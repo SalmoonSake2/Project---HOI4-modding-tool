@@ -154,10 +154,10 @@ class Mapview:
 
                 if isinstance(state_data.core,list):
                     for nation in state_data.core:
-                        core_text += loc(nation)+"("+str(nation)+") "
+                        core_text += loc(nation+"_DEF")+"("+str(nation)+") "
                 
                 else:
-                    core_text += loc(state_data.core)+"("+str(state_data.core)+") "
+                    core_text += loc(state_data.core+"_DEF")+"("+str(state_data.core)+") "
             
             else: 
                 core_text = "無"
@@ -171,10 +171,10 @@ class Mapview:
 
                 if isinstance(state_data.claim,list):
                     for nation in state_data.claim:
-                        claim_text += loc(nation)+"("+str(nation)+") "
+                        claim_text += loc(nation+"_DEF")+"("+str(nation)+") "
                 
                 else:
-                    claim_text += loc(state_data.claim)+"("+str(state_data.claim)+") "
+                    claim_text += loc(state_data.claim+"_DEF")+"("+str(state_data.claim)+") "
             
             else: 
                 claim_text = "無"

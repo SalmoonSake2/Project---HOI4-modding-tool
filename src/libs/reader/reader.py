@@ -95,25 +95,49 @@ def read_loc_files(running_window:RunningWindow) -> None:
     '''
 
     #找出本地化文件的路徑
-    loc_files = list()
+    loc_files = dict()
 
     for loc_dir in root.path.avalible_path:
 
         loc_file_dir = Path(loc_dir).joinpath("localisation")
 
-        #找出該路徑下的所有本地化文件(優先權: 開發模組-當前語言 > 開發模組-英文 > 引用模組1-開發語言 > 引用模組1-英文 > 引用模組2-開發語言 > ... > 遊戲本體)
-        en_loc_files = list(loc_file_dir.rglob(f"*l_english.yml"))
-        native_loc_files = list(loc_file_dir.rglob(f"*l_{root.mod_lang}.yml"))
+        en_loc_file_list = list(loc_file_dir.rglob(f"*l_english.yml"))
+        native_loc_file_list = list(loc_file_dir.rglob(f"*l_{root.mod_lang}.yml"))
 
-        loc_files.extend(en_loc_files)
-        loc_files.extend(native_loc_files)
+        en_loc_file_list.extend(native_loc_file_list)
 
-    #依序處理每個yml檔並加入到本地化資料中
-    for counter, loc_file in enumerate(loc_files):
+        #確保同名檔案只會出現一次
+        for file in en_loc_file_list:
+            loc_files[file.name] = file
+    
+    #replace底下的檔案
+
+    replace_loc_files = dict()
+    for loc_dir in root.path.avalible_path:
+
+        replace_loc_file_dir = Path(loc_dir).joinpath("localisation/replace")
+
+        replce_en_loc_file_list = list(replace_loc_file_dir.rglob(f"*l_english.yml"))
+        replace_native_loc_file_list = list(replace_loc_file_dir.rglob(f"*l_{root.mod_lang}.yml"))
+
+        replce_en_loc_file_list.extend(replace_native_loc_file_list)
+
+        for file in replce_en_loc_file_list:
+            replace_loc_files[file.name] = file
+
+    for counter1, loc_file in enumerate(loc_files.values()):
 
         read_loc_file(running_window,loc_file)
 
-        running_window.update_progress(int((counter+1)/len(loc_files)*100))
+        running_window.update_progress(int((counter1+1)/(len(loc_files)+len(replace_loc_files))*100))
+        
+        if running_window.is_cancel_task:return
+    
+    for counter2, loc_file in enumerate(replace_loc_files.values()):
+
+        read_loc_file(running_window,loc_file)
+
+        running_window.update_progress(int((counter2+counter1+1)/(len(loc_files)+len(replace_loc_files))*100))
         
         if running_window.is_cancel_task:return
 
