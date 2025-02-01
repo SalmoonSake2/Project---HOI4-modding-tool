@@ -149,7 +149,7 @@ def read_loc_file(running_window:RunningWindow,loc_file:str) -> None:
     '''
 
     #形如 keyword :0"value"的特徵。
-    loc_pattern = r'(\w+):\s*\d*?\s*"([^"]+)"'
+    loc_pattern = r'(^\w+):\s*\d*?\s*"([^"]+)"'
 
     #讀取檔案並找尋翻譯字串加入到本地化資料中
     with open(file=loc_file,mode="r",encoding="utf-8-sig") as file:
