@@ -229,6 +229,8 @@ def read_map_files(running_window:RunningWindow) -> None:
             print(fc.RED+tb.format_exc()+fc.CC)
             return
     
+    del path, province_array, index, data, color
+
     running_window.update_progress(15)
     print("正在處理map/adjacencies.csv")
 
@@ -263,6 +265,8 @@ def read_map_files(running_window:RunningWindow) -> None:
             print(fc.RED+tb.format_exc()+fc.CC)
             return
     
+    del path, file_reading, adjacencies_array, data, adjacencies
+
     running_window.update_progress(20)
     print("正在處理map/adjacency_rules.txt")
 
@@ -315,6 +319,9 @@ def read_map_files(running_window:RunningWindow) -> None:
             print(fc.RED+tb.format_exc()+fc.CC)
             return
 
+    del path, file_reading, adjacency_rules_data, relationships, statement, name, required_provinces, is_disabled, icon, offset
+    del passing_rule, relationship, army_rule, navy_rule,submarine_rule, trade_rule
+
     running_window.update_progress(25)
     print("正在處理map/continent.txt")
 
@@ -335,6 +342,8 @@ def read_map_files(running_window:RunningWindow) -> None:
             running_window.exception = f"處理以下檔案時發生錯誤:{file_reading},{e}"
             print(fc.RED+tb.format_exc()+fc.CC)
             return
+    
+    del path, file_reading, continents, index, name
 
     running_window.update_progress(27)
     print("正在處理map/supply_nodes.txt")
@@ -349,6 +358,8 @@ def read_map_files(running_window:RunningWindow) -> None:
             print(fc.RED+tb.format_exc()+fc.CC)
             return
 
+    del path, file_reading
+
     running_window.update_progress(30)
     print("正在處理map/railways.txt")
 
@@ -362,6 +373,8 @@ def read_map_files(running_window:RunningWindow) -> None:
             print(fc.RED+tb.format_exc()+fc.CC)
             return
     
+    del path, file_reading
+
     running_window.update_progress(35)
     print("正在處理map/unitstacks.txt")
 
@@ -392,6 +405,8 @@ def read_map_files(running_window:RunningWindow) -> None:
             print(fc.RED+tb.format_exc()+fc.CC)
             return
     
+    del path, file_reading, unitstacks_array, VICTORY_POINT_SYMBOL, victory_points, victory_point
+
     running_window.update_progress(40)
     print("正在處理history/state")
 
@@ -452,7 +467,14 @@ def read_map_files(running_window:RunningWindow) -> None:
                                 province_buildings = set()
                                 
                                 for province_statement in statement.value:
-                                    province_buildings.add(Building(name=province_statement.keyword,level=province_statement.value))
+                                    
+                                    #考慮有些DLC才有的內容，如地標
+                                    if not isinstance(province_statement.value,list):
+                                        building_level = province_statement.value
+                                    else:
+                                        building_level = province_statement["level"]
+
+                                    province_buildings.add(Building(name=province_statement.keyword,level=building_level))
 
                                 root.map_data.province[int(statement.keyword)].buildings = province_buildings
 
@@ -465,7 +487,7 @@ def read_map_files(running_window:RunningWindow) -> None:
 
                     if isinstance(data["history"]["victory_points"][0],list):
                         
-                        for victory_point_data in data["history"]["victory_points"]: #statement被當作list
+                        for victory_point_data in data["history"]["victory_points"]:
                             province_id = victory_point_data[0]
                             victory_point_value = victory_point_data[1]
                             root.map_data.province[province_id].victory_point = victory_point_value
@@ -509,6 +531,9 @@ def read_map_files(running_window:RunningWindow) -> None:
             print(fc.RED+tb.format_exc()+fc.CC)
             return
 
+    del path, state_files, file, file_reading, data, state_id, resources, buildings, statement, province_statement, building_level
+    del victory_point_data, province_id, victory_point_value, state_category, province
+
     running_window.update_progress(90)
 
     #處理戰略區
@@ -542,6 +567,8 @@ def read_map_files(running_window:RunningWindow) -> None:
             running_window.exception = f"讀取{file_reading}出現錯誤:{e}"
             print(fc.RED+tb.format_exc()+fc.CC)
             return
+
+    del path, strategicregions_file_path, strategicregion_files, file, file_reading, data, strategicregion_id, provinces, name, province
 
     running_window.update_progress(100)
 

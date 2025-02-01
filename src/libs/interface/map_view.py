@@ -87,7 +87,7 @@ class Mapview:
         if self.mode == "province":
             color = root.game_image.province_image.getpixel((img_x, img_y))
             province_data = Province.from_color(color)
-            name_label = ttk.Label(master=self.inner_info_frame,text="名稱: "+loc(f"VICTORY_POINTS_{province_data.id}"))
+            name_label = ttk.Label(master=self.inner_info_frame,text="名稱: "+loc(f"VICTORY_POINTS_{province_data.id}") if loc(f"VICTORY_POINTS_{province_data.id}") != f"VICTORY_POINTS_{province_data.id}" else "名稱: 無")
             name_label.grid(column=0,row=0,padx=10,sticky=ttk.W)
             id_label = ttk.Label(master=self.inner_info_frame,text="ID: "+str(province_data.id))
             id_label.grid(column=0,row=1,padx=10,sticky=ttk.W)
@@ -143,7 +143,7 @@ class Mapview:
             manpower_label.grid(row=2,column=0,padx=10,sticky=ttk.W)
             category_label = ttk.Label(master=self.inner_info_frame,text="類型: "+loc(state_data.state_category))
             category_label.grid(row=3,column=0,padx=10,sticky=ttk.W)
-            owner_label = ttk.Label(master=self.inner_info_frame,text="擁有者: "+loc(state_data.owner)+"("+str(state_data.owner)+")")
+            owner_label = ttk.Label(master=self.inner_info_frame,text="擁有者: "+loc(f"{state_data.owner}_DEF")+"("+str(state_data.owner)+")")
             owner_label.grid(row=4,column=0,padx=10,sticky=ttk.W)
             local_supply_label = ttk.Label(master=self.inner_info_frame,text="當地補給: "+str(state_data.local_supply))
             local_supply_label.grid(row=5,column=0,padx=10,sticky=ttk.W)
