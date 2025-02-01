@@ -426,29 +426,16 @@ def read_map_files(running_window:RunningWindow) -> None:
 
                 state_id = int(data["id"])
 
-                '''
-                留意以下表示法:
-
-                resources = {a = 1 b = 2}
-                或是
-                resources = {a = 1}
-                resources = {b = 2}
-
-                有時候會出現
-                resources = { }
-                抑或者完全不寫
-
-                總之最後要形成resource_name: count 的dict
-                '''
+                #表示法可能分成合併型或並排型，同時會有在數量使用小數點的謎之行為要注意
                 if data["resources"] is not None and data["resources"] != []:
 
                     #寫在一起
                     if isinstance(data["resources"],PDXstatement):
-                        resources = { statement.keyword: statement.value for statement in data["resources"].value}
+                        resources = { statement.keyword.lower(): int(float(statement.value)) for statement in data["resources"].value}
 
                     #並排分開
                     else:
-                        resources = {statement.value[0].keyword : statement.value[0].value for statement in data["resources"]}
+                        resources = {statement.value[0].keyword.lower() : int(float(statement.value[0].value)) for statement in data["resources"]}
                 else:
                     resources = None
 
