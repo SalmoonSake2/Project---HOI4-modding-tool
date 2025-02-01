@@ -462,7 +462,18 @@ def read_map_files(running_window:RunningWindow) -> None:
                     buildings = None
                 
                 if data["history"]["victory_points"] is not None:
-                    victory_point_list = [data["history"]["victory_points"],] if isinstance(data["history"]["victory_points"][0],int) else data["history"]["victory_points"]
+
+                    if isinstance(data["history"]["victory_points"][0],list):
+                        
+                        for victory_point_data in data["history"]["victory_points"]: #statement被當作list
+                            province_id = victory_point_data[0]
+                            victory_point_value = victory_point_data[1]
+                            root.map_data.province[province_id].victory_point = victory_point_value
+                    
+                    else:
+                        province_id = data["history"]["victory_points"][0]
+                        victory_point_value = data["history"]["victory_points"][1]
+                        root.map_data.province[province_id].victory_point = victory_point_value
                 
                 #參見history/states/190-Kurzeme.txt，他重複兩次category不知道在衝三小
                 try:
@@ -481,7 +492,6 @@ def read_map_files(running_window:RunningWindow) -> None:
                                                        claim=data["history"]["add_claim_by"],
                                                        demilitarized_zone= True if data["history"]["set_demilitarized_zone"] == "yes" else False,
                                                        controller= data["history"]["controller"],
-                                                       victory_points= {victory_point[0]: victory_point[1] for victory_point in victory_point_list},
                                                        resources=resources,
                                                        buildings=buildings,
                                                        impassable=True if data["impassable"] == "yes" else False)

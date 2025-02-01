@@ -28,6 +28,7 @@ class Province:
         self.type = type            #省分海陸
         self.coastal = coastal      #省分臨海
         self.continent = continent  #省分大陸
+        self.victory_point:int = None   #勝利點價值
         self.pos:tuple[int,int]  = None   #勝利點座標(西南原點)
         self.buildings:set[Building] = None    #建築
     
@@ -148,7 +149,6 @@ class State:
                  provinces:tuple[int],
                  local_supply:float = 0,
                  resources:dict[str,int] = None,
-                 victory_points:dict[int,int] = None,
                  buildings:set[Building] = None,
                  core:set[str] = None,
                  claim:set[str] = None,
@@ -163,7 +163,6 @@ class State:
         self.provinces = provinces
         self.local_supply = local_supply
         self.resources = resources
-        self.victory_points = victory_points
         self.buildings = buildings
         self.core = core
         self.claim = claim

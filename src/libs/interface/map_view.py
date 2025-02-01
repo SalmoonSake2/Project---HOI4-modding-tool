@@ -117,8 +117,17 @@ class Mapview:
             else:
                 building_text = "無"
 
+            if province_data.victory_point is not None:
+                victory_point_value = province_data.victory_point
+            
+            else:
+                victory_point_value = "無"
+            
+            victory_point_label = ttk.Label(master=self.inner_info_frame,text=f"勝利點價值: {victory_point_value}")
+            victory_point_label.grid(column=0,row=5,padx=10,sticky=ttk.W)
+
             building_label = ttk.Label(master=self.inner_info_frame,text=f"建築: {building_text}",justify="left")
-            building_label.grid(column=0,row=5,padx=10,sticky=ttk.W)
+            building_label.grid(column=0,row=6,padx=10,sticky=ttk.W)
         
         elif self.mode == "state":
             color = root.game_image.state_map.getpixel((img_x, img_y))
