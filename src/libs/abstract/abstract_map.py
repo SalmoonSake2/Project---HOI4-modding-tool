@@ -140,10 +140,11 @@ class State:
     def from_province_id(province_id:int) -> 'State':...
 
 class StrategicRegion:
-    def __init__(self,id:int,provinces:tuple[int],name:str) -> None:
+    def __init__(self,id:int,provinces:tuple[int],name:str,naval_terrain:str=None) -> None:
         self.id = id
         self.name = name
         self.provinces = provinces
+        self.naval_terrain:str = naval_terrain
     
     @staticmethod
-    def from_province(id:int) -> 'StrategicRegion':...
+    def from_province_id(id:int) -> 'StrategicRegion':...

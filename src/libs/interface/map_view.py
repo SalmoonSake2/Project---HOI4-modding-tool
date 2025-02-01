@@ -219,6 +219,18 @@ class Mapview:
                 special_property_label = ttk.Label(master=self.inner_info_frame,text=special_property_text,style=ttk.DANGER)
                 special_property_label.grid(row=100,column=0,padx=10,sticky=ttk.W)
 
+        elif self.mode == "strategic":
+            color = root.game_image.strategic_map.getpixel((img_x, img_y))
+
+            strategic_data = StrategicRegion.from_province_id(Province.from_color(color).id)
+
+            name_label = ttk.Label(master=self.inner_info_frame,text=f"名稱: {loc(strategic_data.name)}")
+            name_label.grid(row=0,column=0,padx=10,sticky=ttk.W)
+            id_label = ttk.Label(master=self.inner_info_frame,text=f"ID: {strategic_data.id}")
+            id_label.grid(row=1,column=0,padx=10,sticky=ttk.W)
+            naval_terrain_label = ttk.Label(master=self.inner_info_frame,text=f"海軍地形: {loc(strategic_data.naval_terrain) if strategic_data.naval_terrain is not None else "海洋"}")
+            naval_terrain_label.grid(row=2,column=0,padx=10,sticky=ttk.W)
+        
     def get_hover_color(self,event) -> None:
         '''
         獲取當前滑鼠所指的顏色並顯示座標及資訊

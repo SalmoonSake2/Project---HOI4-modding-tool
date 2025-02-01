@@ -564,7 +564,8 @@ def read_map_files(running_window:RunningWindow) -> None:
                 strategicregion_id = int(data["id"])
                 provinces = data["provinces"]
                 name = data["name"].strip('"')
-                root.map_data.strategicregions[strategicregion_id] = StrategicRegion(strategicregion_id,provinces,name)
+                naval_terrain = data["naval_terrain"]
+                root.map_data.strategicregions[strategicregion_id] = StrategicRegion(strategicregion_id,provinces,name,naval_terrain=naval_terrain)
 
                 #建立省分的逆向映射
                 #留意: 原版的15 - Asia是空的
