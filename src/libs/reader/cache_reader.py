@@ -18,7 +18,7 @@ def pickle_read(path:str) -> Any:
 
 def save_cache(running_window) -> None:
     try:
-        cache = (root.game_loc,root.map_data,root.game_image)
+        cache = (root.game_loc,root.map_data,root.game_image,root.common_data)
         pickle_write(cache,"data/cache.dat")
     except:
         running_window.exception = "建立快取資料出現錯誤"
@@ -26,7 +26,7 @@ def save_cache(running_window) -> None:
 
 def load_cache(running_window=None) -> None:
     try:
-        root.game_loc, root.map_data, root.game_image = pickle_read("data/cache.dat")
+        root.game_loc, root.map_data, root.game_image, root.common_data = pickle_read("data/cache.dat")
     except:
         running_window.exception = "讀取快取資料出現錯誤"
         return

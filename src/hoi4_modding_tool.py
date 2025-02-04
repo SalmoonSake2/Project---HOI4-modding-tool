@@ -184,6 +184,7 @@ class App:
             append_mission(create_state_map_image,(),None,"繪製地塊地圖")
             append_mission(create_strategic_map_image,(),None,"繪製戰略區地圖")
             append_mission(create_nation_map_image,(),None,"繪製政權地圖")
+            append_mission(read_buildings_files,(),None,"讀取建築")
             append_mission(save_cache,(),None,"建立快取")
         else:
             append_mission(load_cache,(),None,"讀取快取")

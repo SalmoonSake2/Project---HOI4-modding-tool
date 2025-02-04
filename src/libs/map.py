@@ -56,7 +56,7 @@ class Adjacency:
                  pos2:tuple[int,int] | None = None,
                  rule:str = None) -> None:
         self.p1, self.p2 = p1, p2           #連結的兩個省份ID
-        self.type = type                    #連結類型
+        self.type = type if type in ("sea","impassable") else "sea"  #連結類型
         self.through = through              #通過的省分
         self.pos1, self.pos2 = pos1, pos2   #畫面起始與結束座標
         self.rule = rule                    #連結規則

@@ -11,6 +11,7 @@ from PIL import Image
 from libs.enums import *
 from libs.interface.running_window import RunningWindow
 from libs.map import *
+from libs.misc.buildings import BuildingData
 from libs.pdxscript import read as pdxread
 from libs.pdxscript import PDXstatement
 from libs.root import root
@@ -165,7 +166,7 @@ def read_loc_file(running_window:RunningWindow,loc_file:str) -> None:
             if running_window.is_cancel_task: break
 
 def read_map_files(running_window:RunningWindow) -> None:
-    '''
+    '''                                                   
     讀取地圖檔案，相關技術細節可以參閱\n
     https://hoi4.paradoxwikis.com/Map_modding#Provinces
 
@@ -529,21 +530,19 @@ def read_map_files(running_window:RunningWindow) -> None:
                                                        buildings=buildings,
                                                        impassable=True if data["impassable"] == "yes" else False)
 
-                #依序將省分逆回來做映射
-                for province in data["provinces"]:
-
-                    root.map_data.map_mapping.province_to_state[int(province)] = state_id
-
-                    if running_window.is_cancel_task: return
-
         except FileNotFoundError: pass
         except Exception as e:
             running_window.exception = f"讀取{file_reading}出現錯誤:{e}"
             print(fc.RED+tb.format_exc()+fc.CC)
             return
+        
+    #將province回來映射
+    for state_id in root.map_data.states:
+        for province_id in root.map_data.states[state_id].provinces:
+            root.map_data.map_mapping.province_to_state[province_id] = state_id
 
     del path, state_files, file, file_reading, data, state_id, resources, buildings, statement, province_statement, building_level
-    del victory_point_data, province_id, victory_point_value, state_category, province
+    del victory_point_data, province_id, victory_point_value, state_category
 
     running_window.update_progress(90)
 
@@ -702,30 +701,6 @@ def create_province_map_image(running_window:RunningWindow) -> None:
     建立省分視圖
     '''
     running_window.update_progress(0)
-
-    #廢案，標註省分中心
-    # pixels = province_image.load()
-    # w,h = province_image.size
-
-    # def get_vic_pos(province_id:int) -> tuple[int,int]:
-    #     match = (root.map_data["unitstack"]["id"] == province_id ) &\
-    #             (root.map_data["unitstack"]["type"] == 38)
-    #     try:
-    #         data = root.map_data["unitstack"][match][0]
-    #         return (data["x"],data["z"])
-    #     except:
-    #         return (0,0)
-
-    # for counter, province in enumerate(root.map_data["province"]):
-    #     vic_x, vic_y = get_vic_pos(province["id"])
-    #     vic_x = vic_x +1
-    #     vic_y = h - vic_y -1
-    #     try:
-    #         pixels[vic_x,vic_y] = (255,255,255)
-    #     except:
-    #         raise Exception(f"{vic_x,vic_y}")
-    #     running_window.progress_var = int((counter/len(root.map_data["province"]))*100)
-    
     root.game_image.province_map = root.game_image.province_image.copy()
 
     running_window.update_progress(100)
@@ -861,3 +836,64 @@ def create_nation_map_image(running_window:RunningWindow) -> None:
         running_window.update_progress(int((x/w)*100))
     
     root.game_image.nation_map =  nation_map_image
+
+def read_buildings_files(running_window:RunningWindow) -> None:
+    '''
+    讀取common/buildings
+    '''
+    running_window.update_progress(0)
+
+    #收集檔案
+    files:dict[str,str] = dict() # name: path
+
+    for path in root.path.avalible_path:
+
+        building_dir = Path(path).joinpath("common/buildings")
+        building_files = list(building_dir.rglob("*.txt"))
+
+        for building_file in building_files:
+            files[building_file.name] = building_file
+    
+    #讀取
+    for file in files.values():
+
+        data = PDXstatement("file",pdxread(file))["buildings"].value
+
+        for building_type_statement in data:
+
+            statement:PDXstatement = building_type_statement
+
+            name = statement.keyword
+            icon_frame = statement["icon_frame"]
+            
+            level_cap_statement = statement["level_cap"]
+
+            using_slot = "non-shared"
+
+            if level_cap_statement["shares_slots"] is not None:using_slot = "shared"
+                
+            elif level_cap_statement["province_max"] is not None:using_slot = "provincial"
+            
+            if level_cap_statement["state_max"] is not None:
+                max_level = level_cap_statement["state_max"]
+            
+            elif level_cap_statement["province_max"] is not None:
+                max_level = level_cap_statement["province_max"]
+            
+            else:
+                max_level = 15 # by hoi4 default
+            
+            if statement["only_costal"] is not None:    #原文如此
+                only_coastal = True
+            
+            else:
+                only_coastal = False
+            
+            if statement["disabled_in_dmz"] is not None:
+                disabled_in_dmz = True
+            
+            else:
+                disabled_in_dmz = False
+
+            root.common_data.buildings[name] = BuildingData(name,icon_frame,using_slot,only_coastal,disabled_in_dmz,max_level)
+

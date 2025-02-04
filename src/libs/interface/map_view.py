@@ -4,13 +4,16 @@ map_view.py
 
 from typing import Literal
 
+from pathlib import Path
+from PIL import Image, ImageTk
 import ttkbootstrap as ttk
+from ttkbootstrap.tooltip import ToolTip
+from ttkbootstrap.validation import add_numeric_validation
 
 from libs.enums import *
 from libs.interface.localisation import loc
 from libs.interface.image_view import Imageview
 from libs.map import *
-from libs.stringutil import listring
 from libs.root import root
 
 class Mapview:
@@ -26,11 +29,11 @@ class Mapview:
     def show_and_create_widget(self) -> None:
         
         toplevel = ttk.Toplevel(title="地圖檢視器",
-                            size=(1300,900),
+                            size=(1340,900),
                             transient=self.prev)
         
         map_frame = ttk.Frame(master=toplevel)
-        map_frame.pack(side="left",fill="y")
+        map_frame.pack(side=ttk.LEFT,fill=ttk.Y)
 
         self.imageview = Imageview(master=map_frame,
                                    height=40,
@@ -38,17 +41,17 @@ class Mapview:
                                    scale_restrction=(0.21,20),
                                    operation_key=("<MouseWheel>","<ButtonPress-2>","<B2-Motion>"),
                                    image=root.game_image.province_map)
-        self.imageview.pack(fill="y",expand=True)
+        self.imageview.pack(fill=ttk.Y,expand=True)
 
         self.imageview.create_rectangle(0,0,900,40,fill="#555555")
-        self.imageview.create_text(10,10,text="省分ID:",fill="#CCCCCC",font="Helvetica 12",anchor="nw",tags="_text")
-        self.imageview.create_text(760,10,text="座標:",fill="#CCCCCC",font="Helvetica 12",anchor="nw",tags="_coord")
+        self.imageview.create_text(10,10,text="省分ID:",fill="#CCCCCC",font="Helvetica 12",anchor=ttk.NW,tags="_text")
+        self.imageview.create_text(760,10,text="座標:",fill="#CCCCCC",font="Helvetica 12",anchor=ttk.NW,tags="_coord")
 
         self.imageview.bind("<Motion>", self.get_hover_color)
         self.imageview.bind("<ButtonPress-1>",self.show_map_item)
 
         view_mode_frame = ttk.Frame(master=map_frame)
-        view_mode_frame.pack(fill="x")
+        view_mode_frame.pack(fill=ttk.X)
 
         view_mode = ("province","state","strategic","nation","river","heightmap","terrain")
         view_mode_loc = dict(zip(view_mode,("省分","地塊","戰略區","政權","河流","高度圖","地形")))
@@ -58,15 +61,15 @@ class Mapview:
         for mode in view_mode:
             button = ttk.Button(master=view_mode_frame,
                                 text=view_mode_loc[mode],
-                                style="outline",
+                                style=ttk.OUTLINE,
                                 command=lambda x=mode:self.set_view_mode(x))
             view_mode_button[mode] = button
-            view_mode_button[mode].pack(side="left",pady=5)
+            view_mode_button[mode].pack(side=ttk.LEFT,pady=5)
         
-        self.info_frame = ttk.Labelframe(master=toplevel,width=350,text="詳細資訊")
-        self.info_frame.pack(side="left",fill="both",expand=True,padx=5,pady=5)
+        self.info_frame = ttk.Labelframe(master=toplevel,width=420,text="詳細資訊")
+        self.info_frame.pack(side=ttk.LEFT,fill=ttk.BOTH,expand=True,padx=5,pady=5)
         self.inner_info_frame = ttk.Frame(master=self.info_frame)
-        self.inner_info_frame.pack(fill="both")
+        self.inner_info_frame.pack(fill=ttk.BOTH)
     
     def show_map_item(self,event) -> None:
         '''
@@ -82,52 +85,118 @@ class Mapview:
         
         self.inner_info_frame.destroy()
         self.inner_info_frame = ttk.Frame(master=self.info_frame)
-        self.inner_info_frame.pack(side="left",fill="both",pady=10)
+        self.inner_info_frame.pack(side=ttk.LEFT,fill=ttk.BOTH,pady=10)
 
         if self.mode == "province":
             color = root.game_image.province_image.getpixel((img_x, img_y))
             province_data = Province.from_color(color)
-            name_label = ttk.Label(master=self.inner_info_frame,text="名稱: "+loc(f"VICTORY_POINTS_{province_data.id}") if loc(f"VICTORY_POINTS_{province_data.id}") != f"VICTORY_POINTS_{province_data.id}" else "名稱: 無")
-            name_label.grid(column=0,row=0,padx=10,sticky=ttk.W)
-            id_label = ttk.Label(master=self.inner_info_frame,text="ID: "+str(province_data.id))
-            id_label.grid(column=0,row=1,padx=10,sticky=ttk.W)
-            terrain_label = ttk.Label(master=self.inner_info_frame,text="地形: "+loc(province_data.terrain))
-            terrain_label.grid(column=0,row=2,padx=10,sticky=ttk.W)
-            continent_label = ttk.Label(master=self.inner_info_frame,text="大陸: "+loc(root.map_data.continents[province_data.continent]) if province_data.continent != 0 else "大陸: 無歸屬")
-            continent_label.grid(column=0,row=3,padx=10,sticky=ttk.W)
+
+            #ID顯示
+            id_label = ttk.Label(master=self.inner_info_frame,text=f"省分ID: {province_data.id}")
+            id_label.grid(row=0,column=0,padx=10,pady=5,sticky=ttk.W)
+
+            #名稱輸入
+            name_entry_frame = ttk.Frame(master=self.inner_info_frame)
+            name_entry_frame.grid(row=1,column=0,padx=10,pady=5,sticky=ttk.W)
+
+            ttk.Label(master=name_entry_frame,text="省分名稱: ").pack(side=ttk.LEFT)
+            name_entry = ttk.Entry(master=name_entry_frame)
+            name_entry.var = ttk.StringVar()
+
+            if loc(f"VICTORY_POINTS_{province_data.id}") != f"VICTORY_POINTS_{province_data.id}":
+                name_entry.var.set(loc(f"VICTORY_POINTS_{province_data.id}"))
+
+            name_entry.config(textvariable=name_entry.var)
+            name_entry.pack(side=ttk.LEFT)
+
+            #大陸輸入
+            continent_combo_btn_frame = ttk.Frame(master=self.inner_info_frame)
+            continent_combo_btn_frame.grid(row=2,column=0,padx=10,pady=5,sticky=ttk.W)
+
+            ttk.Label(master=continent_combo_btn_frame,text="大陸歸屬: ").pack(side=ttk.LEFT)
+
+            continent_combo_btn_options = list(loc(continent_key) for continent_key in root.map_data.continents.values())
+            continent_combo_btn_options.extend(["未指派"])
+
+            continent_combo_btn = ttk.Combobox(master=continent_combo_btn_frame,
+                                               state=ttk.READONLY,
+                                               values=continent_combo_btn_options)
+            
+            if province_data.continent != 0:
+                continent_combo_btn.var = ttk.StringVar(value=loc(root.map_data.continents[province_data.continent]))
+            
+            else:
+                continent_combo_btn.var = ttk.StringVar(value="未指派")
+            
+            continent_combo_btn.config(textvariable=continent_combo_btn.var)
+            
+            continent_combo_btn.pack(side=ttk.LEFT)
+
+            #型別輸入
+            province_type_combo_btn_frame = ttk.Frame(master=self.inner_info_frame)
+            province_type_combo_btn_frame.grid(row=3,column=0,padx=10,pady=5,sticky=ttk.W)
+
+            ttk.Label(master=province_type_combo_btn_frame,text="省分型別: ").pack(side=ttk.LEFT)
+
+            province_type_combo_btn_options = ("陸地","海岸","海洋")
+            province_type_combo_btn = ttk.Combobox(master=province_type_combo_btn_frame,
+                                                   state=ttk.READONLY,
+                                                   values=province_type_combo_btn_options)
+            
+            province_type_combo_btn.var = ttk.StringVar()
 
             if province_data.type == "sea":
-                province_type = "海洋"
+                province_type_combo_btn.var.set("海洋")
             
             elif province_data.type == "land" and province_data.coastal == True:
-                province_type = "海岸"
+                province_type_combo_btn.var.set("海岸")
             
             else:
-                province_type = "陸地"
+                province_type_combo_btn.var.set("陸地")
+            
+            province_type_combo_btn.config(textvariable=province_type_combo_btn.var)
 
-            type_label = ttk.Label(master=self.inner_info_frame,text="類型: "+province_type)
-            type_label.grid(column=0,row=4,padx=10,sticky=ttk.W)
+            province_type_combo_btn.pack(side=ttk.LEFT)
 
-            if province_data.buildings is not None:
-                building_text = ""
-                
-                for building in province_data.buildings:
-                    building_text += loc(building.name) + f"x{building.level} "
+            #勝利點
+            victory_point_frame = ttk.Frame(master=self.inner_info_frame)
+            victory_point_frame.grid(row=4,column=0,padx=10,pady=5,sticky=ttk.W)
 
-            else:
-                building_text = "無"
+            ttk.Label(master=victory_point_frame,text="勝利點價值: ").pack(side=ttk.LEFT)
+
+            victory_point_entry = ttk.Entry(master=victory_point_frame)
+            victory_point_entry.var = ttk.StringVar()
+
+            add_numeric_validation(victory_point_entry)
 
             if province_data.victory_point is not None:
-                victory_point_value = province_data.victory_point
-            
-            else:
-                victory_point_value = "無"
-            
-            victory_point_label = ttk.Label(master=self.inner_info_frame,text=f"勝利點價值: {victory_point_value}")
-            victory_point_label.grid(column=0,row=5,padx=10,sticky=ttk.W)
+                victory_point_entry.var.set(str(province_data.victory_point))
 
-            building_label = ttk.Label(master=self.inner_info_frame,text=f"建築: {building_text}",justify="left")
-            building_label.grid(column=0,row=6,padx=10,sticky=ttk.W)
+            victory_point_entry.config(textvariable=victory_point_entry.var)
+            victory_point_entry.pack(side=ttk.LEFT)
+
+            #建築
+            building_frame = ttk.Frame(master=self.inner_info_frame)
+            building_frame.grid(row=5,column=0,padx=10,pady=5,sticky=ttk.W)
+
+            #地形
+            terrain_picture = ttk.Label(master=self.inner_info_frame)
+            if province_data.terrain != "lakes" and province_data.terrain != "ocean":
+                terrain_picture.image = ImageTk.PhotoImage(Image.open(Path(root.path.hoi4path).joinpath(f"gfx/interface/terrains/terrain_{province_data.terrain}.dds")))
+                terrain_picture.config(image=terrain_picture.image)
+                terrain_picture.grid(row=7,column=0,padx=10,sticky=ttk.W)
+
+            elif province_data.terrain == "ocean":
+                terrain_picture.image = ImageTk.PhotoImage(Image.open(Path(root.path.hoi4path).joinpath(f"gfx/interface/terrains/terrain_water_day.dds")))
+                terrain_picture.config(image=terrain_picture.image)
+                terrain_picture.grid(row=7,column=0,padx=10,sticky=ttk.W)
+
+            elif province_data.terrain == "lakes":
+                terrain_picture.image = ImageTk.PhotoImage(Image.open(Path(root.path.hoi4path).joinpath(f"gfx/interface/terrains/terrain_archipelago_day.dds")))
+                terrain_picture.config(image=terrain_picture.image)
+                terrain_picture.grid(row=7,column=0,padx=10,sticky=ttk.W)
+
+            ToolTip(terrain_picture,text=loc(province_data.terrain),bootstyle=ttk.LIGHT)
         
         elif self.mode == "state":
             color = root.game_image.state_map.getpixel((img_x, img_y))

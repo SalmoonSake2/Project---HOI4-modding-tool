@@ -10,7 +10,7 @@ from PIL import Image
 import ttkbootstrap as ttk
 
 from libs.abstract.abstract_map import *
-from libs.pdxscript import PDXstatement
+from libs.misc.buildings import BuildingData
 
 class RootImage:
     '''
@@ -73,15 +73,23 @@ class Rootpath:
 
         self.country_tag:dict = dict()          #國家TAG對上檔案名稱
 
+class CommonData:
+    '''
+    難以歸類的遊戲資料
+    '''
+    def __init__(self):
+        self.buildings:dict[str,BuildingData] = dict()  #建築屬性
+
 class Root(ttk.Window):
     def __init__(self,*args,**kwargs) -> None:
         super().__init__(*args,**kwargs)
-        self.mod_lang: str = "simp_chinese"     #模組開發語言(主要影響讀取本地化文件時的路徑)
-        self.using_cache:bool = True            #使用快取建立檔案
-        self.game_loc: dict = dict()            #本地化文件
-        self.path:Rootpath = Rootpath()         #路徑
-        self.map_data:Mapdata = Mapdata()       #地圖資訊
-        self.game_image:RootImage = RootImage() #圖像
+        self.mod_lang: str = "simp_chinese"         #模組開發語言(主要影響讀取本地化文件時的路徑)
+        self.using_cache:bool = True                #使用快取建立檔案
+        self.game_loc: dict = dict()                #本地化文件
+        self.path:Rootpath = Rootpath()             #路徑
+        self.map_data:Mapdata = Mapdata()           #地圖資訊
+        self.common_data:CommonData = CommonData()  #難以歸類的遊戲資料
+        self.game_image:RootImage = RootImage()     #圖像
 
 root:Root = Root(title="鋼鐵雄心四模組工具",
                  themename="darkly",
